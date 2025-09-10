@@ -33,49 +33,46 @@ const ItemTypes = {
   TASK: 'task',
 };
 
-// Form schemas for add operations
-const addTaskFormSchema = insertTaskSchema.extend({
-  scheduledDate: z.string().min(1, "Date is required"),
-  scheduledHour: z.number().min(0).max(23),
-});
-
-const addNoteFormSchema = insertTimeBlockNoteSchema.extend({
-  content: z.string().min(1, "Note content is required").max(1000, "Note content is too long"),
-});
-
-const addEventFormSchema = insertCalendarEventSchema.extend({
-  title: z.string().min(1, "Event title is required").max(200, "Title is too long"),
-  duration: z.number().min(1, "Duration must be at least 1 hour").max(6, "Duration cannot exceed 6 hours"),
-});
-
-// Form schemas for edit operations  
-const editTaskFormSchema = addTaskFormSchema.extend({
-  id: z.string(),
-});
-
-const editNoteFormSchema = addNoteFormSchema.extend({
-  id: z.string(),
-});
-
-const editEventFormSchema = addEventFormSchema.extend({
-  id: z.string(),
-});
-
-interface TimeBlockDetailsProps {
-  date: string;
-  hour: number;
-  events: CalendarEvent[];
-  tasks: Task[];
-  notes: TimeBlockNote[];
-  isExpanded: boolean;
-  onToggle: () => void;
+interface TaskBlockProps {
+  task: Task;
 }
 
-function TimeBlockDetails({ date, hour, events, tasks, notes, isExpanded, onToggle }: TimeBlockDetailsProps) {
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [addType, setAddType] = useState<"task" | "note" | "event">("task");
-  const [editingItem, setEditingItem] = useState<{type: "task" | "note" | "event", id: string} | null>(null);
+function TaskBlock({ task }: TaskBlockProps) {
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700";
+      case "medium":
+        return "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-700";
+      case "low":
+        return "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700";
+      default:
+        return "bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700";
+    }
+  };
+
+  return (
+    <div 
+      className={`px-2 py-1 mb-1 rounded text-xs border ${getPriorityColor(task.priority)}`}
+      data-testid={`task-block-${task.id}`}
+    >
+      <div className="font-medium truncate">{task.title}</div>
+    </div>
+  );
+}
+
+interface TimeSlotProps {
+  date: string;
+  hour: number;
+  tasks: Task[];
+  events: CalendarEvent[];
+  notes: TimeBlockNote[];
+  isCurrentHour?: boolean;
+}
+
+function TimeSlot({ date, hour, tasks, events, notes, isCurrentHour }: TimeSlotProps) {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Set up drop target for tasks
   const [{ isOver }, drop] = useDrop({
@@ -87,8 +84,6 @@ function TimeBlockDetails({ date, hour, events, tasks, notes, isExpanded, onTogg
       isOver: monitor.isOver(),
     }),
   });
-
-  const queryClient = useQueryClient();
 
   // Handle dropped tasks
   const scheduleTaskMutation = useMutation({
@@ -128,460 +123,46 @@ function TimeBlockDetails({ date, hour, events, tasks, notes, isExpanded, onTogg
       scheduledHour: hour,
     });
   };
-  
-  // Form instances for adding items
-  const addTaskForm = useForm<z.infer<typeof addTaskFormSchema>>({
-    resolver: zodResolver(addTaskFormSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      priority: "medium",
-      status: "todo",
-      scheduledDate: date,
-      scheduledHour: hour,
-      completed: false,
-    },
-  });
 
-  const addNoteForm = useForm<z.infer<typeof addNoteFormSchema>>({
-    resolver: zodResolver(addNoteFormSchema),
-    defaultValues: {
-      date,
-      hour,
-      content: "",
-    },
-  });
-
-  const addEventForm = useForm<z.infer<typeof addEventFormSchema>>({
-    resolver: zodResolver(addEventFormSchema),
-    defaultValues: {
-      title: "",
-      description: "",
-      date,
-      hour,
-      duration: 1,
-    },
-  });
-
-  const dateObj = parseISO(date);
-  const hourString = formatTime(hour);
-
-  // Mutations for creating items
-  const createTaskMutation = useMutation({
-    mutationFn: async (taskData: any) => {
-      const response = await apiRequest("POST", "/api/tasks", taskData);
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create task");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
-      resetAddForm();
-      toast({
-        title: "Success",
-        description: "Task created successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
-  const createNoteMutation = useMutation({
-    mutationFn: async (noteData: any) => {
-      const response = await apiRequest("POST", "/api/time-block-notes", noteData);
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create note");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/time-block-notes"] });
-      resetAddForm();
-      toast({
-        title: "Success",
-        description: "Note created successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
-  const createEventMutation = useMutation({
-    mutationFn: async (eventData: any) => {
-      const response = await apiRequest("POST", "/api/calendar-events", eventData);
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error || "Failed to create event");
-      }
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/calendar-events"] });
-      resetAddForm();
-      toast({
-        title: "Success",
-        description: "Event created successfully",
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    }
-  });
-
-  const resetAddForm = () => {
-    setShowAddForm(false);
-    // Reset forms while preserving date/hour defaults
-    addTaskForm.reset({
-      title: "",
-      description: "",
-      priority: "medium",
-      status: "todo",
-      scheduledDate: date,
-      scheduledHour: hour,
-      completed: false,
-    });
-    addNoteForm.reset({
-      date,
-      hour,
-      content: "",
-    });
-    addEventForm.reset({
-      title: "",
-      description: "",
-      date,
-      hour,
-      duration: 1,
-    });
-  };
-
-  const handleAddTask = (values: z.infer<typeof addTaskFormSchema>) => {
-    createTaskMutation.mutate(values);
-  };
-
-  const handleAddNote = (values: z.infer<typeof addNoteFormSchema>) => {
-    createNoteMutation.mutate(values);
-  };
-
-  const handleAddEvent = (values: z.infer<typeof addEventFormSchema>) => {
-    createEventMutation.mutate(values);
-  };
-  
   return (
-    <div ref={drop}>
-      <Collapsible open={isExpanded} onOpenChange={() => onToggle()}>
-        <CollapsibleTrigger asChild>
-          <div className={`w-full text-left focus:outline-none focus:ring-2 focus:ring-primary/50 rounded transition-colors ${
-            isOver ? "bg-primary/10 dark:bg-primary/5 border-primary/50" : ""
-          }`} data-testid={`trigger-timeblock-${date}-${hour}`}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-medium text-muted-foreground dark:text-muted-foreground">
-                {format(dateObj, "EEE")} {hourString}
-              </span>
-              {isExpanded ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-            </div>
-          </div>
-        </CollapsibleTrigger>
-        
-        <CollapsibleContent className="mt-2" data-testid={`expanded-timeblock-${date}-${hour}`}>
-          <div className={`space-y-3 p-3 border rounded-md shadow-sm transition-colors ${
-            isOver 
-              ? "bg-primary/5 dark:bg-primary/10 border-primary/30 dark:border-primary/50" 
-              : "bg-background dark:bg-background border-border dark:border-border"
-          }`}>
-            <div className="flex items-center justify-between">
-              <h4 className="font-semibold text-sm text-foreground dark:text-foreground">
-                {format(dateObj, "EEEE, MMM d, yyyy")} at {hourString}
-              </h4>
-              <Button 
-                size="sm" 
-                variant="outline" 
-                onClick={() => setShowAddForm(!showAddForm)}
-                data-testid="button-add-content"
-              >
-                <Plus className="h-3 w-3 mr-1" />
-                Add
-              </Button>
-            </div>
-
-          {/* Add Form */}
-          {showAddForm && (
-            <div className="space-y-3 p-3 border border-border dark:border-border rounded-md bg-muted/30 dark:bg-muted/20" data-testid="add-form">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium">Add:</span>
-                <Select value={addType} onValueChange={(value: "task" | "note" | "event") => setAddType(value)}>
-                  <SelectTrigger className="w-32" data-testid="select-add-type">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="task">Task</SelectItem>
-                    <SelectItem value="note">Note</SelectItem>
-                    <SelectItem value="event">Event</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {addType === "task" && (
-                <Form {...addTaskForm}>
-                  <form id={`add-task-form-${date}-${hour}`} onSubmit={addTaskForm.handleSubmit(handleAddTask)} className="space-y-4">
-                    <FormField
-                      control={addTaskForm.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Task Title</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Task title..." {...field} data-testid="input-task-title" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addTaskForm.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description (optional)</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Description (optional)..." rows={2} {...field} value={field.value || ""} data-testid="input-task-description" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addTaskForm.control}
-                      name="priority"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Priority</FormLabel>
-                          <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl>
-                              <SelectTrigger data-testid="select-task-priority">
-                                <SelectValue placeholder="Select priority" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="low">Low Priority</SelectItem>
-                              <SelectItem value="medium">Medium Priority</SelectItem>
-                              <SelectItem value="high">High Priority</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </form>
-                </Form>
-              )}
-
-              {addType === "note" && (
-                <Form {...addNoteForm}>
-                  <form id={`add-note-form-${date}-${hour}`} onSubmit={addNoteForm.handleSubmit(handleAddNote)} className="space-y-4">
-                    <FormField
-                      control={addNoteForm.control}
-                      name="content"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Note Content</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Write your note..." rows={3} {...field} data-testid="input-note-content" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </form>
-                </Form>
-              )}
-
-              {addType === "event" && (
-                <Form {...addEventForm}>
-                  <form id={`add-event-form-${date}-${hour}`} onSubmit={addEventForm.handleSubmit(handleAddEvent)} className="space-y-4">
-                    <FormField
-                      control={addEventForm.control}
-                      name="title"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Event Title</FormLabel>
-                          <FormControl>
-                            <Input placeholder="Event title..." {...field} data-testid="input-event-title" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addEventForm.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description (optional)</FormLabel>
-                          <FormControl>
-                            <Textarea placeholder="Description (optional)..." rows={2} {...field} value={field.value || ""} data-testid="input-event-description" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={addEventForm.control}
-                      name="duration"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Duration</FormLabel>
-                          <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={field.value?.toString()}>
-                            <FormControl>
-                              <SelectTrigger className="w-32" data-testid="select-event-duration">
-                                <SelectValue placeholder="Select duration" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {[1, 2, 3, 4, 5, 6].map(hours => (
-                                <SelectItem key={hours} value={hours.toString()}>{hours} hour{hours > 1 ? "s" : ""}</SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  </form>
-                </Form>
-              )}
-
-              <div className="flex gap-2">
-                {addType === "task" && (
-                  <Button
-                    size="sm"
-                    type="submit"
-                    form={`add-task-form-${date}-${hour}`}
-                    disabled={createTaskMutation.isPending || !addTaskForm.formState.isValid}
-                    data-testid="button-save-item"
-                  >
-                    <Save className="h-3 w-3 mr-1" />
-                    Save Task
-                  </Button>
-                )}
-                {addType === "note" && (
-                  <Button
-                    size="sm"
-                    type="submit"
-                    form={`add-note-form-${date}-${hour}`}
-                    disabled={createNoteMutation.isPending || !addNoteForm.formState.isValid}
-                    data-testid="button-save-item"
-                  >
-                    <Save className="h-3 w-3 mr-1" />
-                    Save Note
-                  </Button>
-                )}
-                {addType === "event" && (
-                  <Button
-                    size="sm"
-                    type="submit"
-                    form={`add-event-form-${date}-${hour}`}
-                    disabled={createEventMutation.isPending || !addEventForm.formState.isValid}
-                    data-testid="button-save-item"
-                  >
-                    <Save className="h-3 w-3 mr-1" />
-                    Save Event
-                  </Button>
-                )}
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={resetAddForm}
-                  data-testid="button-cancel-add"
-                >
-                  <X className="h-3 w-3 mr-1" />
-                  Cancel
-                </Button>
-              </div>
-            </div>
+    <div 
+      ref={drop}
+      className={`h-full w-full p-1 transition-colors ${
+        isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
+      } ${
+        isOver ? "bg-primary/10 dark:bg-primary/5" : ""
+      }`}
+      data-testid={`time-slot-${date}-${hour}`}
+    >
+      {/* Display tasks as colored blocks */}
+      {tasks.map(task => (
+        <TaskBlock key={task.id} task={task} />
+      ))}
+      
+      {/* Display events */}
+      {events.map(event => (
+        <div 
+          key={event.id} 
+          className="px-2 py-1 mb-1 rounded text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
+          data-testid={`event-block-${event.id}`}
+        >
+          <div className="font-medium truncate">{event.title}</div>
+          {event.duration > 1 && (
+            <div className="text-xs opacity-75">{event.duration}h</div>
           )}
-
-          {/* Display existing items */}
-          <div className="space-y-4">
-            {/* Events */}
-            {events.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <Clock className="h-4 w-4 text-blue-600 dark:text-blue-400" />
-                  <h5 className="text-sm font-medium text-foreground dark:text-foreground">Events</h5>
-                </div>
-                {events.map(event => (
-                  <div key={event.id} className="p-2 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded">
-                    <div className="font-medium text-sm">{event.title}</div>
-                    {event.description && <div className="text-xs text-muted-foreground mt-1">{event.description}</div>}
-                    <div className="text-xs text-blue-600 dark:text-blue-400 mt-1">{event.duration} hour{event.duration !== 1 ? 's' : ''}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {/* Tasks */}
-            {tasks.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <CheckSquare className="h-4 w-4 text-green-600 dark:text-green-400" />
-                  <h5 className="text-sm font-medium text-foreground dark:text-foreground">Tasks</h5>
-                </div>
-                {tasks.map(task => (
-                  <div key={task.id} className="p-2 bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800 rounded">
-                    <div className="font-medium text-sm">{task.title}</div>
-                    {task.description && <div className="text-xs text-muted-foreground mt-1">{task.description}</div>}
-                    <div className="flex gap-2 mt-1">
-                      <span className={`text-xs px-2 py-0.5 rounded ${
-                        task.priority === "high" ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200" :
-                        task.priority === "medium" ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200" :
-                        "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
-                      }`}>
-                        {task.priority}
-                      </span>
-                      <span className="text-xs px-2 py-0.5 rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200">
-                        {task.status}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-            
-            {/* Notes */}
-            {notes.length > 0 && (
-              <div className="space-y-2">
-                <div className="flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                  <h5 className="text-sm font-medium text-foreground dark:text-foreground">Notes</h5>
-                </div>
-                {notes.map(note => (
-                  <div key={note.id} className="p-2 bg-purple-50 dark:bg-purple-950/30 border border-purple-200 dark:border-purple-800 rounded">
-                    <div className="text-sm text-purple-900 dark:text-purple-100 whitespace-pre-wrap">{note.content}</div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
         </div>
-        </CollapsibleContent>
-      </Collapsible>
+      ))}
+      
+      {/* Display notes */}
+      {notes.map(note => (
+        <div 
+          key={note.id} 
+          className="px-2 py-1 mb-1 rounded text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border border-purple-200 dark:border-purple-700"
+          data-testid={`note-block-${note.id}`}
+        >
+          <div className="text-xs opacity-75">Note</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -590,12 +171,10 @@ interface WeekViewProps {
   weekStart: Date;
   currentDate: Date;
   isCurrentWeek: boolean;
-  onTimeBlockClick: (date: string, hour: number) => void;
-  expandedBlock: {date: string, hour: number} | null;
-  onToggleExpanded: (date: string, hour: number) => void;
+  onTimeBlockClick?: (date: string, hour: number) => void;
 }
 
-function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, expandedBlock, onToggleExpanded }: WeekViewProps) {
+function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick }: WeekViewProps) {
   const weekEnd = addDays(weekStart, 6);
   const startDate = formatDate(weekStart);
   const endDate = formatDate(weekEnd);
@@ -627,15 +206,16 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
 
   if (isCurrentWeek) {
     return (
-      <Card className="w-full bg-background dark:bg-background" data-testid="current-week">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-sm font-semibold text-center text-foreground dark:text-foreground">
+      <Card className="w-full bg-white dark:bg-gray-900 shadow-md" data-testid="current-week">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg font-semibold text-center text-gray-900 dark:text-gray-100">
             {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="grid grid-cols-8 border-b border-border dark:border-border">
-            <div className="p-2 text-xs font-medium text-muted-foreground dark:text-muted-foreground border-r border-border dark:border-border">
+          {/* Header with days */}
+          <div className="grid grid-cols-8 border-b border-gray-200 dark:border-gray-700">
+            <div className="p-3 text-sm font-medium text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
               Time
             </div>
             {DAYS_OF_WEEK.map((day, index) => {
@@ -644,13 +224,13 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
               return (
                 <div 
                   key={day}
-                  className={`p-2 text-xs font-medium text-center border-r border-border dark:border-border last:border-r-0 ${
-                    isToday ? "bg-primary/10 dark:bg-primary/20 text-primary dark:text-primary" : "text-muted-foreground dark:text-muted-foreground"
+                  className={`p-3 text-sm font-medium text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 ${
+                    isToday ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300"
                   }`}
                   data-testid={`day-header-${day.toLowerCase()}`}
                 >
                   {day}<br />
-                  <span className="text-xs">{format(date, "d")}</span>
+                  <span className="text-xs font-normal">{format(date, "M/d")}</span>
                 </div>
               );
             })}
@@ -658,8 +238,8 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
           
           {/* Hour rows */}
           {HOURS.map(hour => (
-            <div key={hour} className="grid grid-cols-8 border-b border-border/50 dark:border-border/50 min-h-12">
-              <div className="p-1 text-xs text-muted-foreground dark:text-muted-foreground border-r border-border dark:border-border flex items-center justify-center">
+            <div key={hour} className="grid grid-cols-8 border-b border-gray-100 dark:border-gray-800 min-h-16">
+              <div className="p-2 text-xs text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 flex items-start justify-center pt-2">
                 {formatTime(hour)}
               </div>
               {DAYS_OF_WEEK.map((day, dayIndex) => {
@@ -668,25 +248,22 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                 const isToday = isSameDay(date, currentDate);
                 const isCurrentHour = hour === new Date().getHours() && isToday;
                 const { events: dayEvents, tasks: dayTasks, notes: dayNotes } = getItemsForTimeBlock(dateStr, hour);
-                const hasContent = dayEvents.length > 0 || dayTasks.length > 0 || dayNotes.length > 0;
-                const isExpanded = expandedBlock?.date === dateStr && expandedBlock?.hour === hour;
                 
                 return (
                   <div 
                     key={`${dateStr}-${hour}`}
-                    className={`border-r border-border/50 dark:border-border/50 last:border-r-0 p-1 ${
-                      isCurrentHour ? "bg-primary/5 dark:bg-primary/10" : ""
-                    } ${hasContent ? "bg-accent/20 dark:bg-accent/10" : ""}`}
+                    className={`border-r border-gray-100 dark:border-gray-800 last:border-r-0 ${
+                      isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
+                    }`}
                     data-testid={`time-cell-${dateStr}-${hour}`}
                   >
-                    <TimeBlockDetails
+                    <TimeSlot
                       date={dateStr}
                       hour={hour}
-                      events={dayEvents}
                       tasks={dayTasks}
+                      events={dayEvents}
                       notes={dayNotes}
-                      isExpanded={isExpanded}
-                      onToggle={() => onToggleExpanded(dateStr, hour)}
+                      isCurrentHour={isCurrentHour}
                     />
                   </div>
                 );
@@ -700,9 +277,9 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
   
   // Condensed view for non-current weeks
   return (
-    <Card className="w-full bg-muted/50 dark:bg-muted/30" data-testid="condensed-week">
-      <CardContent className="p-2">
-        <h3 className="text-xs font-medium text-center text-muted-foreground dark:text-muted-foreground mb-2">
+    <Card className="w-full bg-gray-50 dark:bg-gray-800/30 shadow-sm" data-testid="condensed-week">
+      <CardContent className="p-3">
+        <h3 className="text-sm font-medium text-center text-gray-600 dark:text-gray-400 mb-3">
           {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
         </h3>
         <div className="grid grid-cols-7 gap-1">
@@ -717,17 +294,19 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             return (
               <div 
                 key={day}
-                className={`p-1 min-h-8 text-xs rounded border border-border/20 dark:border-border/20 ${
-                  hasContent ? "bg-primary/20 dark:bg-primary/10" : "bg-background/50 dark:bg-background/30"
+                className={`p-2 min-h-10 text-xs rounded border ${
+                  hasContent 
+                    ? "bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700" 
+                    : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
                 }`}
                 data-testid={`condensed-day-${day.toLowerCase()}`}
               >
-                <div className="text-center font-medium text-muted-foreground dark:text-muted-foreground">
+                <div className="text-center font-medium text-gray-700 dark:text-gray-300">
                   {format(date, "d")}
                 </div>
                 {hasContent && (
                   <div className="text-center mt-1">
-                    <div className="w-2 h-2 bg-primary dark:bg-primary rounded-full mx-auto" />
+                    <div className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full mx-auto" />
                   </div>
                 )}
               </div>
@@ -911,7 +490,7 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
                           <FormItem>
                             <FormLabel>Task Title</FormLabel>
                             <FormControl>
-                              <Input placeholder="Task title..." {...field} data-testid={`input-${status}-task-title`} />
+                              <Input placeholder="Task title..." {...field} data-testid="input-task-title" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -924,7 +503,7 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
                           <FormItem>
                             <FormLabel>Description (optional)</FormLabel>
                             <FormControl>
-                              <Textarea placeholder="Description (optional)..." rows={2} {...field} value={field.value || ""} data-testid={`input-${status}-task-description`} />
+                              <Textarea placeholder="Description (optional)..." rows={2} {...field} value={field.value || ""} data-testid="input-task-description" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -938,7 +517,7 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
                             <FormLabel>Priority</FormLabel>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger data-testid={`select-${status}-task-priority`}>
+                                <SelectTrigger data-testid="select-task-priority">
                                   <SelectValue placeholder="Select priority" />
                                 </SelectTrigger>
                               </FormControl>
@@ -952,21 +531,21 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
                           </FormItem>
                         )}
                       />
-                      <div className="flex gap-2">
+                      <div className="flex gap-2 pt-2">
                         <Button
                           size="sm"
                           type="submit"
                           disabled={sidebarCreateTaskMutation.isPending || !addTaskForm.formState.isValid}
-                          data-testid={`save-${status}-task`}
+                          data-testid="button-save-task"
                         >
                           <Save className="h-3 w-3 mr-1" />
-                          Save
+                          Save Task
                         </Button>
                         <Button
                           size="sm"
                           variant="outline"
                           onClick={() => setShowAddForm(false)}
-                          data-testid={`cancel-${status}-task`}
+                          data-testid="button-cancel-add"
                         >
                           <X className="h-3 w-3 mr-1" />
                           Cancel
@@ -1054,8 +633,6 @@ function TaskSidebar() {
 
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedTimeBlock, setSelectedTimeBlock] = useState<{date: string, hour: number} | null>(null);
-  const [expandedBlock, setExpandedBlock] = useState<{date: string, hour: number} | null>(null);
 
   const currentWeekStart = getWeekStart(currentDate);
   const previousWeekStart = addWeeks(currentWeekStart, -1);
@@ -1070,26 +647,14 @@ export default function Calendar() {
     setCurrentDate(new Date());
   };
 
-  const handleTimeBlockClick = (date: string, hour: number) => {
-    setSelectedTimeBlock({ date, hour });
-  };
-
-  const handleToggleExpanded = (date: string, hour: number) => {
-    if (expandedBlock && expandedBlock.date === date && expandedBlock.hour === hour) {
-      setExpandedBlock(null);
-    } else {
-      setExpandedBlock({ date, hour });
-    }
-  };
-
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-background dark:bg-background p-4" data-testid="calendar-page">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4" data-testid="calendar-page">
         <div className="max-w-full mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-foreground dark:text-foreground" data-testid="page-title">
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="page-title">
                 Time Block Calendar
               </h1>
               <Button 
@@ -1132,9 +697,6 @@ export default function Calendar() {
                 weekStart={previousWeekStart}
                 currentDate={currentDate}
                 isCurrentWeek={false}
-                onTimeBlockClick={handleTimeBlockClick}
-                expandedBlock={expandedBlock}
-                onToggleExpanded={handleToggleExpanded}
               />
               
               {/* Current Week */}
@@ -1142,9 +704,6 @@ export default function Calendar() {
                 weekStart={currentWeekStart}
                 currentDate={currentDate}
                 isCurrentWeek={true}
-                onTimeBlockClick={handleTimeBlockClick}
-                expandedBlock={expandedBlock}
-                onToggleExpanded={handleToggleExpanded}
               />
               
               {/* Next Week */}
@@ -1152,19 +711,7 @@ export default function Calendar() {
                 weekStart={nextWeekStart}
                 currentDate={currentDate}
                 isCurrentWeek={false}
-                onTimeBlockClick={handleTimeBlockClick}
-                expandedBlock={expandedBlock}
-                onToggleExpanded={handleToggleExpanded}
               />
-
-              {/* Selected time block info */}
-              {selectedTimeBlock && (
-                <div className="mt-4 p-4 bg-accent/20 dark:bg-accent/10 rounded-lg" data-testid="selected-time-block">
-                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-                    Selected: {format(parseISO(selectedTimeBlock.date), "EEEE, MMM d, yyyy")} at {formatTime(selectedTimeBlock.hour)}
-                  </p>
-                </div>
-              )}
             </div>
 
             {/* Task Sidebar */}
