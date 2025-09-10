@@ -23,15 +23,45 @@ import { useToast } from "@/hooks/use-toast";
 // Utility functions for date handling
 const getWeekStart = (date: Date) => startOfWeek(date, { weekStartsOn: 1 }); // Monday start
 const formatDate = (date: Date) => format(date, "yyyy-MM-dd");
-const formatTime = (hour: number) => format(new Date().setHours(hour, 0, 0, 0), "HH:mm");
+const formatTime = (hour: number) => {
+  const date = new Date().setHours(hour, 0, 0, 0);
+  return format(date, "h:mm a");
+};
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const DAYS_OF_WEEK = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+const DAYS_OF_WEEK = ["MON", "TUES", "WEDS", "THURS", "FRI", "SAT", "SUN"];
 
 // Drag and drop item types
 const ItemTypes = {
   TASK: 'task',
 };
+
+// Component for rendering events that span multiple hours
+interface SpanningEventProps {
+  event: CalendarEvent;
+  isCurrentHour?: boolean;
+}
+
+function SpanningEvent({ event, isCurrentHour }: SpanningEventProps) {
+  const duration = event.duration || 1;
+  const startHour = event.hour;
+  
+  return (
+    <div 
+      className="mx-1 px-2 py-1 rounded text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 z-10 flex flex-col justify-start"
+      style={{
+        gridRow: `${startHour + 1} / span ${duration}`,
+        gridColumn: 1,
+      }}
+      data-testid={`spanning-event-${event.id}`}
+    >
+      <div className="font-medium truncate">{event.title}</div>
+      {duration > 1 && (
+        <div className="text-xs opacity-75">{duration}h</div>
+      )}
+    </div>
+  );
+}
 
 interface TaskBlockProps {
   task: Task;
@@ -65,12 +95,11 @@ interface TimeSlotProps {
   date: string;
   hour: number;
   tasks: Task[];
-  events: CalendarEvent[];
   notes: TimeBlockNote[];
   isCurrentHour?: boolean;
 }
 
-function TimeSlot({ date, hour, tasks, events, notes, isCurrentHour }: TimeSlotProps) {
+function TimeSlot({ date, hour, tasks, notes, isCurrentHour }: TimeSlotProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -139,20 +168,6 @@ function TimeSlot({ date, hour, tasks, events, notes, isCurrentHour }: TimeSlotP
         <TaskBlock key={task.id} task={task} />
       ))}
       
-      {/* Display events */}
-      {events.map(event => (
-        <div 
-          key={event.id} 
-          className="px-2 py-1 mb-1 rounded text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
-          data-testid={`event-block-${event.id}`}
-        >
-          <div className="font-medium truncate">{event.title}</div>
-          {event.duration > 1 && (
-            <div className="text-xs opacity-75">{event.duration}h</div>
-          )}
-        </div>
-      ))}
-      
       {/* Display notes */}
       {notes.map(note => (
         <div 
@@ -198,15 +213,18 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick }: W
   });
 
   const getItemsForTimeBlock = (date: string, hour: number) => {
-    const dayEvents = events.filter(event => event.date === date && event.hour === hour);
     const dayTasks = tasks.filter(task => task.scheduledDate === date && task.scheduledHour === hour);
     const dayNotes = notes.filter(note => note.date === date && note.hour === hour);
-    return { events: dayEvents, tasks: dayTasks, notes: dayNotes };
+    return { tasks: dayTasks, notes: dayNotes };
+  };
+
+  const getEventsForDay = (date: string) => {
+    return events.filter(event => event.date === date);
   };
 
   if (isCurrentWeek) {
     return (
-      <Card className="w-full bg-white dark:bg-gray-900 shadow-md" data-testid="current-week">
+      <Card className="w-full bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700" data-testid="current-week">
         <CardHeader className="pb-3">
           <CardTitle className="text-lg font-semibold text-center text-gray-900 dark:text-gray-100">
             {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
@@ -215,7 +233,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick }: W
         <CardContent className="p-0">
           {/* Header with days */}
           <div className="grid grid-cols-8 border-b border-gray-200 dark:border-gray-700">
-            <div className="p-3 text-sm font-medium text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700">
+            <div className="p-3 text-sm font-medium text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               Time
             </div>
             {DAYS_OF_WEEK.map((day, index) => {
@@ -224,52 +242,82 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick }: W
               return (
                 <div 
                   key={day}
-                  className={`p-3 text-sm font-medium text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 ${
+                  className={`p-3 text-sm font-medium text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 bg-gray-50 dark:bg-gray-800 ${
                     isToday ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300"
                   }`}
                   data-testid={`day-header-${day.toLowerCase()}`}
                 >
-                  {day}<br />
-                  <span className="text-xs font-normal">{format(date, "M/d")}</span>
+                  {day} {format(date, "M/d")}
                 </div>
               );
             })}
           </div>
           
-          {/* Hour rows */}
-          {HOURS.map(hour => (
-            <div key={hour} className="grid grid-cols-8 border-b border-gray-100 dark:border-gray-800 min-h-16">
-              <div className="p-2 text-xs text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 flex items-start justify-center pt-2">
-                {formatTime(hour)}
-              </div>
-              {DAYS_OF_WEEK.map((day, dayIndex) => {
-                const date = addDays(weekStart, dayIndex);
-                const dateStr = formatDate(date);
-                const isToday = isSameDay(date, currentDate);
-                const isCurrentHour = hour === new Date().getHours() && isToday;
-                const { events: dayEvents, tasks: dayTasks, notes: dayNotes } = getItemsForTimeBlock(dateStr, hour);
-                
-                return (
-                  <div 
-                    key={`${dateStr}-${hour}`}
-                    className={`border-r border-gray-100 dark:border-gray-800 last:border-r-0 ${
-                      isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
-                    }`}
-                    data-testid={`time-cell-${dateStr}-${hour}`}
-                  >
-                    <TimeSlot
-                      date={dateStr}
-                      hour={hour}
-                      tasks={dayTasks}
-                      events={dayEvents}
-                      notes={dayNotes}
-                      isCurrentHour={isCurrentHour}
-                    />
-                  </div>
-                );
-              })}
+          {/* Calendar Grid */}
+          <div className="grid grid-cols-8">
+            {/* Time column */}
+            <div className="border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+              {HOURS.map(hour => (
+                <div 
+                  key={hour} 
+                  className="h-12 p-2 text-xs text-gray-500 dark:text-gray-400 flex items-start justify-center pt-2 border-b border-gray-100 dark:border-gray-800"
+                >
+                  {formatTime(hour)}
+                </div>
+              ))}
             </div>
-          ))}
+            
+            {/* Day columns with CSS Grid */}
+            {DAYS_OF_WEEK.map((day, dayIndex) => {
+              const date = addDays(weekStart, dayIndex);
+              const dateStr = formatDate(date);
+              const isToday = isSameDay(date, currentDate);
+              const dayEvents = getEventsForDay(dateStr);
+              
+              return (
+                <div 
+                  key={`${dateStr}`}
+                  className="relative border-r border-gray-100 dark:border-gray-800 last:border-r-0"
+                  style={{
+                    display: 'grid',
+                    gridTemplateRows: 'repeat(24, 3rem)',
+                    gridTemplateColumns: '1fr'
+                  }}
+                  data-testid={`day-column-${dateStr}`}
+                >
+                  {/* Render spanning events */}
+                  {dayEvents.map(event => (
+                    <SpanningEvent key={event.id} event={event} />
+                  ))}
+                  
+                  {/* Render time slots for tasks and notes */}
+                  {HOURS.map(hour => {
+                    const isCurrentHour = hour === new Date().getHours() && isToday;
+                    const { tasks: dayTasks, notes: dayNotes } = getItemsForTimeBlock(dateStr, hour);
+                    
+                    return (
+                      <div 
+                        key={`${dateStr}-${hour}`}
+                        className={`border-b border-gray-100 dark:border-gray-800 ${
+                          isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
+                        }`}
+                        style={{ gridRow: hour + 1 }}
+                        data-testid={`time-cell-${dateStr}-${hour}`}
+                      >
+                        <TimeSlot
+                          date={dateStr}
+                          hour={hour}
+                          tasks={dayTasks}
+                          notes={dayNotes}
+                          isCurrentHour={isCurrentHour}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
         </CardContent>
       </Card>
     );
@@ -333,32 +381,37 @@ function DraggableTask({ task, bgColor, borderColor }: DraggableTaskProps) {
     }),
   });
 
+  const getPriorityDotColor = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-500";
+      case "medium":
+        return "bg-orange-500";
+      case "low":
+        return "bg-green-500";
+      default:
+        return "bg-gray-500";
+    }
+  };
+
   return (
     <div
       ref={drag}
-      className={`p-2 rounded border cursor-move transition-opacity ${bgColor} ${borderColor} ${
+      className={`p-2 rounded cursor-move transition-opacity hover:bg-gray-50 dark:hover:bg-gray-800 ${
         isDragging ? "opacity-50" : ""
       }`}
       data-testid={`draggable-task-${task.id}`}
     >
       <div className="flex items-center gap-2">
-        <Move className="h-3 w-3 text-muted-foreground" />
-        <div className="flex-1">
-          <div className="font-medium text-sm text-foreground dark:text-foreground">{task.title}</div>
-          {task.description && (
-            <div className="text-xs text-muted-foreground dark:text-muted-foreground mt-1">{task.description}</div>
-          )}
-          <div className="flex items-center gap-2 mt-1">
-            <span className={`text-xs px-1.5 py-0.5 rounded ${
-              task.priority === "high" ? "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200" :
-              task.priority === "medium" ? "bg-yellow-100 dark:bg-yellow-900 text-yellow-800 dark:text-yellow-200" :
-              "bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200"
-            }`}>
-              {task.priority}
-            </span>
-          </div>
-        </div>
+        <div className={`w-2 h-2 rounded-full ${getPriorityDotColor(task.priority)}`} />
+        <span className="text-sm text-gray-900 dark:text-gray-100 flex-1">{task.title}</span>
+        <Move className="h-3 w-3 text-gray-400" />
       </div>
+      {task.description && (
+        <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 ml-4">
+          {task.description.length > 50 ? task.description.substring(0, 50) + "..." : task.description}
+        </div>
+      )}
     </div>
   );
 }
@@ -439,11 +492,7 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
         <CollapsibleTrigger asChild>
           <div className="flex items-center justify-between p-2 hover:bg-muted/50 dark:hover:bg-muted/30 rounded cursor-pointer" data-testid={`section-header-${status}`}>
             <div className="flex items-center gap-2">
-              {icon}
-              <h3 className="font-medium text-foreground dark:text-foreground">{title}</h3>
-              <span className="text-xs text-muted-foreground dark:text-muted-foreground bg-muted dark:bg-muted px-2 py-1 rounded-full">
-                {tasks.length}
-              </span>
+              <h3 className="font-medium text-gray-900 dark:text-gray-100">{title}</h3>
             </div>
             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
@@ -565,6 +614,7 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
 
 function TaskSidebar() {
   const { toast } = useToast();
+  const currentDate = new Date();
 
   // Fetch all tasks to categorize by status and scheduling
   const { data: allTasks = [], isLoading } = useQuery<Task[]>({
@@ -585,22 +635,22 @@ function TaskSidebar() {
 
   if (isLoading) {
     return (
-      <div className="w-80 bg-background dark:bg-background border-l border-border dark:border-border p-4">
-        <div className="text-center text-muted-foreground">Loading tasks...</div>
+      <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 p-4">
+        <div className="text-center text-gray-500 dark:text-gray-400">Loading tasks...</div>
       </div>
     );
   }
 
   return (
-    <div className="w-80 bg-background dark:bg-background border-l border-border dark:border-border p-4" data-testid="task-sidebar">
-      <div className="flex items-center gap-2 mb-4">
-        <List className="h-5 w-5" />
-        <h2 className="text-lg font-semibold text-foreground dark:text-foreground">Tasks</h2>
+    <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 p-4" data-testid="task-sidebar">
+      {/* Date Header */}
+      <div className="mb-6">
+        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">{format(currentDate, "MMMM d, yyyy")}</h2>
       </div>
 
       {/* To-Do Section */}
       <TaskSidebarSection 
-        title="To-Do"
+        title={`TO-DO (${todoTasks.length})`}
         status="todo"
         tasks={todoTasks}
         icon={<CheckSquare className="h-4 w-4 text-red-600 dark:text-red-400" />}
@@ -610,7 +660,7 @@ function TaskSidebar() {
 
       {/* Upcoming Section */}
       <TaskSidebarSection 
-        title="Upcoming"
+        title={`UPCOMING (${upcomingTasks.length})`}
         status="upcoming"
         tasks={upcomingTasks}
         icon={<CalendarIcon className="h-4 w-4 text-blue-600 dark:text-blue-400" />}
@@ -620,7 +670,7 @@ function TaskSidebar() {
 
       {/* Later Section */}
       <TaskSidebarSection 
-        title="Later"
+        title={`LATER (${laterTasks.length})`}
         status="later"
         tasks={laterTasks}
         icon={<Clock className="h-4 w-4 text-gray-600 dark:text-gray-400" />}
@@ -649,7 +699,7 @@ export default function Calendar() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-4" data-testid="calendar-page">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4" data-testid="calendar-page">
         <div className="max-w-full mx-auto">
           {/* Header */}
           <div className="flex items-center justify-between mb-6">
