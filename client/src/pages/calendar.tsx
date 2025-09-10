@@ -96,12 +96,13 @@ interface TimeSlotProps {
   hour: number;
   tasks: Task[];
   notes: TimeBlockNote[];
+  events: CalendarEvent[];
   isCurrentHour?: boolean;
   isExpanded?: boolean;
   onTimeSlotClick?: (date: string, hour: number) => void;
 }
 
-function TimeSlot({ date, hour, tasks, notes, isCurrentHour, isExpanded, onTimeSlotClick }: TimeSlotProps) {
+function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded, onTimeSlotClick }: TimeSlotProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -269,127 +270,179 @@ function TimeSlot({ date, hour, tasks, notes, isCurrentHour, isExpanded, onTimeS
     onTimeSlotClick?.(date, hour);
   };
 
-  return (
-    <>
-      <div 
-        ref={drop}
-        className={`h-full w-full p-1 transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
-          isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
-        } ${
-          isOver ? "bg-primary/10 dark:bg-primary/5" : ""
-        } ${
-          isExpanded ? "bg-primary/20 dark:bg-primary/10 border-l-2 border-primary" : ""
-        }`}
-        data-testid={`time-slot-${date}-${hour}`}
-        onClick={handleTimeSlotClick}
-      >
-        {/* Display tasks as colored blocks */}
-        {tasks.map(task => (
-          <TaskBlock key={task.id} task={task} />
-        ))}
-        
-        {/* Display notes */}
-        {notes.map(note => (
-          <div 
-            key={note.id} 
-            className="px-2 py-1 mb-1 rounded text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border border-purple-200 dark:border-purple-700"
-            data-testid={`note-block-${note.id}`}
-          >
-            <div className="text-xs opacity-75">Note: {note.content.substring(0, 20)}{note.content.length > 20 ? '...' : ''}</div>
-          </div>
-        ))}
-        
-        {/* Click indicator when empty */}
-        {tasks.length === 0 && notes.length === 0 && (
-          <div className="flex items-center justify-center h-full opacity-0 hover:opacity-50 transition-opacity">
-            <Plus className="h-3 w-3 text-gray-400" />
+  // Render collapsed content (single line with truncation)
+  const renderCollapsedContent = () => {
+    const allItems = [...tasks, ...notes, ...events];
+    if (allItems.length === 0) {
+      return (
+        <div className="flex items-center justify-center h-full opacity-0 hover:opacity-50 transition-opacity">
+          <Plus className="h-3 w-3 text-gray-400" />
+        </div>
+      );
+    }
+
+    const visibleItems = allItems.slice(0, 2); // Show max 2 items
+    const remainingCount = allItems.length - visibleItems.length;
+
+    return (
+      <div className="flex items-center gap-1 overflow-hidden whitespace-nowrap text-ellipsis min-h-[2rem]">
+        {visibleItems.map((item, index) => {
+          if ('priority' in item) {
+            // Task
+            const task = item as Task;
+            return (
+              <div 
+                key={`task-${task.id}`}
+                className={`px-1.5 py-0.5 text-xs rounded truncate ${getPriorityColor(task.priority)}`}
+              >
+                {task.title}
+              </div>
+            );
+          } else if ('content' in item) {
+            // Note
+            const note = item as TimeBlockNote;
+            return (
+              <div 
+                key={`note-${note.id}`}
+                className="px-1.5 py-0.5 text-xs rounded truncate bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
+              >
+                {note.content}
+              </div>
+            );
+          } else {
+            // Event
+            const event = item as CalendarEvent;
+            return (
+              <div 
+                key={`event-${event.id}`}
+                className="px-1.5 py-0.5 text-xs rounded truncate bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+              >
+                {event.title}
+              </div>
+            );
+          }
+        })}
+        {remainingCount > 0 && (
+          <div className="px-1.5 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+            +{remainingCount}
           </div>
         )}
       </div>
+    );
+  };
+
+  const getPriorityColor = (priority: string) => {
+    switch (priority) {
+      case "high":
+        return "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200";
+      case "medium":
+        return "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200";
+      case "low":
+        return "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200";
+      default:
+        return "bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200";
+    }
+  };
+
+  return (
+    <div 
+      ref={drop}
+      className={`h-full w-full relative transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+        isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
+      } ${
+        isOver ? "bg-primary/10 dark:bg-primary/5" : ""
+      } ${
+        isExpanded ? "bg-primary/20 dark:bg-primary/10 border-l-2 border-primary" : ""
+      }`}
+      data-testid={`time-slot-${date}-${hour}`}
+      onClick={handleTimeSlotClick}
+    >
+      {/* Collapsed header row */}
+      <div className="p-1">
+        {renderCollapsedContent()}
+      </div>
       
-      {/* Expandable Forms Section */}
+      {/* Inline Expansion Panel */}
       {isExpanded && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => onTimeSlotClick?.(date, hour)}>
-            <div 
-              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-4 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto" 
-              onClick={(e) => e.stopPropagation()}
-              data-testid={`expanded-forms-${date}-${hour}`}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-medium text-gray-900 dark:text-gray-100">
-                  {formatTime(hour)} on {format(new Date(date), "MMM d, yyyy")}
-                </h3>
-                <Button
-                  size="sm"
-                  variant="ghost"
-                  onClick={() => onTimeSlotClick?.(date, hour)}
-                  data-testid="button-close-expanded"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
+        <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-md shadow-xl z-20 max-h-96 overflow-y-auto">
+          <div className="p-4" data-testid={`expanded-forms-${date}-${hour}`}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="font-medium text-gray-900 dark:text-gray-100 text-sm">
+                {formatTime(hour)} on {format(new Date(date), "MMM d, yyyy")}
+              </h3>
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={() => onTimeSlotClick?.(date, hour)}
+                data-testid="button-close-expanded"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              {/* Note Form */}
+              <div className="space-y-2">
+                <h4 className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                  <FileText className="h-3 w-3" />
+                  Add Note
+                </h4>
+                <Form {...noteForm}>
+                  <form onSubmit={noteForm.handleSubmit(handleCreateNote)} className="space-y-2">
+                    <FormField
+                      control={noteForm.control}
+                      name="content"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Textarea placeholder="Add a note for this time slot..." rows={2} {...field} data-testid="input-note-content" className="text-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button
+                      size="sm"
+                      type="submit"
+                      disabled={createNoteMutation.isPending || !noteForm.formState.isValid}
+                      data-testid="button-create-note"
+                      className="h-7 text-xs"
+                    >
+                      <Save className="h-3 w-3 mr-1" />
+                      {createNoteMutation.isPending ? 'Saving...' : 'Add Note'}
+                    </Button>
+                  </form>
+                </Form>
               </div>
               
-              <div className="space-y-6">
-                {/* Note Form */}
-                <div className="space-y-3">
-                  <h4 className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <FileText className="h-4 w-4" />
-                    Add Note
-                  </h4>
-                  <Form {...noteForm}>
-                    <form onSubmit={noteForm.handleSubmit(handleCreateNote)} className="space-y-3">
-                      <FormField
-                        control={noteForm.control}
-                        name="content"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Textarea placeholder="Add a note for this time slot..." rows={2} {...field} data-testid="input-note-content" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      <Button
-                        size="sm"
-                        type="submit"
-                        disabled={createNoteMutation.isPending || !noteForm.formState.isValid}
-                        data-testid="button-create-note"
-                      >
-                        <Save className="h-3 w-3 mr-1" />
-                        {createNoteMutation.isPending ? 'Saving...' : 'Add Note'}
-                      </Button>
-                    </form>
-                  </Form>
-                </div>
-                
-                {/* Task Form */}
-                <div className="space-y-3">
-                  <h4 className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <CheckSquare className="h-4 w-4" />
-                    Add Task
-                  </h4>
-                  <Form {...taskForm}>
-                    <form onSubmit={taskForm.handleSubmit(handleCreateTask)} className="space-y-3">
-                      <FormField
-                        control={taskForm.control}
-                        name="title"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input placeholder="Task title..." {...field} data-testid="input-task-title-expanded" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+              {/* Task Form */}
+              <div className="space-y-2">
+                <h4 className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                  <CheckSquare className="h-3 w-3" />
+                  Add Task
+                </h4>
+                <Form {...taskForm}>
+                  <form onSubmit={taskForm.handleSubmit(handleCreateTask)} className="space-y-2">
+                    <FormField
+                      control={taskForm.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="Task title..." {...field} data-testid="input-task-title-expanded" className="h-8 text-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
                       <FormField
                         control={taskForm.control}
                         name="description"
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
-                              <Textarea placeholder="Description (optional)..." rows={2} {...field} value={field.value || ""} data-testid="input-task-description-expanded" />
+                              <Textarea placeholder="Description (optional)..." rows={2} {...field} value={field.value || ""} data-testid="input-task-description-expanded" className="text-sm" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -402,7 +455,7 @@ function TimeSlot({ date, hour, tasks, notes, isCurrentHour, isExpanded, onTimeS
                           <FormItem>
                             <Select onValueChange={field.onChange} defaultValue={field.value}>
                               <FormControl>
-                                <SelectTrigger data-testid="select-task-priority-expanded">
+                                <SelectTrigger data-testid="select-task-priority-expanded" className="h-8 text-sm">
                                   <SelectValue placeholder="Select priority" />
                                 </SelectTrigger>
                               </FormControl>
@@ -416,46 +469,49 @@ function TimeSlot({ date, hour, tasks, notes, isCurrentHour, isExpanded, onTimeS
                           </FormItem>
                         )}
                       />
-                      <Button
-                        size="sm"
-                        type="submit"
-                        disabled={createTaskMutation.isPending || !taskForm.formState.isValid}
-                        data-testid="button-create-task"
-                      >
-                        <Save className="h-3 w-3 mr-1" />
-                        {createTaskMutation.isPending ? 'Creating...' : 'Add Task'}
-                      </Button>
-                    </form>
-                  </Form>
-                </div>
-                
-                {/* Event Form */}
-                <div className="space-y-3">
-                  <h4 className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                    <CalendarIcon className="h-4 w-4" />
-                    Add Event
-                  </h4>
-                  <Form {...eventForm}>
-                    <form onSubmit={eventForm.handleSubmit(handleCreateEvent)} className="space-y-3">
-                      <FormField
-                        control={eventForm.control}
-                        name="title"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormControl>
-                              <Input placeholder="Event title..." {...field} data-testid="input-event-title" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                    </div>
+                    <Button
+                      size="sm"
+                      type="submit"
+                      disabled={createTaskMutation.isPending || !taskForm.formState.isValid}
+                      data-testid="button-create-task"
+                      className="h-7 text-xs"
+                    >
+                      <Save className="h-3 w-3 mr-1" />
+                      {createTaskMutation.isPending ? 'Creating...' : 'Add Task'}
+                    </Button>
+                  </form>
+                </Form>
+              </div>
+              
+              {/* Event Form */}
+              <div className="space-y-2">
+                <h4 className="flex items-center gap-2 text-xs font-medium text-gray-700 dark:text-gray-300">
+                  <CalendarIcon className="h-3 w-3" />
+                  Add Event
+                </h4>
+                <Form {...eventForm}>
+                  <form onSubmit={eventForm.handleSubmit(handleCreateEvent)} className="space-y-2">
+                    <FormField
+                      control={eventForm.control}
+                      name="title"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <Input placeholder="Event title..." {...field} data-testid="input-event-title" className="h-8 text-sm" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <div className="grid grid-cols-2 gap-2">
                       <FormField
                         control={eventForm.control}
                         name="description"
                         render={({ field }) => (
                           <FormItem>
                             <FormControl>
-                              <Textarea placeholder="Description (optional)..." rows={2} {...field} value={field.value || ""} data-testid="input-event-description" />
+                              <Textarea placeholder="Description (optional)..." rows={2} {...field} value={field.value || ""} data-testid="input-event-description" className="text-sm" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
@@ -466,32 +522,34 @@ function TimeSlot({ date, hour, tasks, notes, isCurrentHour, isExpanded, onTimeS
                         name="duration"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel>Duration (hours)</FormLabel>
+                            <FormLabel className="text-xs">Duration (hours)</FormLabel>
                             <FormControl>
-                              <Input type="number" min="1" max="12" {...field} value={field.value || 1} onChange={(e) => field.onChange(parseInt(e.target.value) || 1)} data-testid="input-event-duration" />
+                              <Input type="number" min="1" max="12" {...field} value={field.value || 1} onChange={(e) => field.onChange(parseInt(e.target.value) || 1)} data-testid="input-event-duration" className="h-8 text-sm" />
                             </FormControl>
                             <FormMessage />
                           </FormItem>
                         )}
                       />
-                      <Button
-                        size="sm"
-                        type="submit"
-                        disabled={createEventMutation.isPending || !eventForm.formState.isValid}
-                        data-testid="button-create-event"
-                      >
-                        <Save className="h-3 w-3 mr-1" />
-                        {createEventMutation.isPending ? 'Creating...' : 'Add Event'}
-                      </Button>
-                    </form>
-                  </Form>
-                </div>
+                    </div>
+                    <Button
+                      size="sm"
+                      type="submit"
+                      disabled={createEventMutation.isPending || !eventForm.formState.isValid}
+                      data-testid="button-create-event"
+                      className="h-7 text-xs"
+                    >
+                      <Save className="h-3 w-3 mr-1" />
+                      {createEventMutation.isPending ? 'Creating...' : 'Add Event'}
+                    </Button>
+                  </form>
+                </Form>
               </div>
             </div>
           </div>
-        )}
-      </>
-    );
+        </div>
+      )}
+    </div>
+  );
 }
 
 interface WeekViewProps {
@@ -500,12 +558,33 @@ interface WeekViewProps {
   isCurrentWeek: boolean;
   onTimeBlockClick?: (date: string, hour: number) => void;
   expandedTimeSlot?: { date: string; hour: number } | null;
+  sidebarOpen?: boolean;
+  onSidebarClose?: () => void;
 }
 
-function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, expandedTimeSlot }: WeekViewProps) {
+function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, expandedTimeSlot, sidebarOpen, onSidebarClose }: WeekViewProps) {
   const weekEnd = addDays(weekStart, 6);
   const startDate = formatDate(weekStart);
   const endDate = formatDate(weekEnd);
+  
+  // Calculate expanded day index
+  const expandedDayIndex = expandedTimeSlot ? 
+    DAYS_OF_WEEK.findIndex((_, index) => {
+      const date = addDays(weekStart, index);
+      return formatDate(date) === expandedTimeSlot.date;
+    }) : -1;
+  
+  // Generate dynamic grid template columns
+  const generateGridColumns = () => {
+    const timeColumn = '64px';
+    const dayColumns = DAYS_OF_WEEK.map((_, index) => {
+      if (index === expandedDayIndex) {
+        return 'minmax(0, 2.2fr)';
+      }
+      return 'minmax(0, 1fr)';
+    });
+    return [timeColumn, ...dayColumns].join(' ');
+  };
 
   // Fetch data for the week
   const { data: events = [] } = useQuery<CalendarEvent[]>({
@@ -545,7 +624,10 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
         </CardHeader>
         <CardContent className="p-0">
           {/* Header with days */}
-          <div className="grid grid-cols-8 border-b border-gray-200 dark:border-gray-700">
+          <div 
+            className="grid border-b border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out"
+            style={{ gridTemplateColumns: generateGridColumns() }}
+          >
             <div className="p-3 text-sm font-medium text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               Time
             </div>
@@ -567,7 +649,10 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
           </div>
           
           {/* Calendar Grid */}
-          <div className="grid grid-cols-8">
+          <div 
+            className="grid transition-all duration-300 ease-in-out"
+            style={{ gridTemplateColumns: generateGridColumns() }}
+          >
             {/* Time column */}
             <div className="border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               {HOURS.map(hour => (
@@ -622,6 +707,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                           hour={hour}
                           tasks={dayTasks}
                           notes={dayNotes}
+                          events={events.filter(event => event.date === dateStr && event.hour === hour)}
                           isCurrentHour={isCurrentHour}
                           isExpanded={expandedTimeSlot?.date === dateStr && expandedTimeSlot?.hour === hour}
                           onTimeSlotClick={onTimeBlockClick}
@@ -632,6 +718,38 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                 </div>
               );
             })}
+            
+            {/* Sidebar Overlay - positioned as grid item spanning weekend columns */}
+            {isCurrentWeek && sidebarOpen && (
+              <div 
+                className="bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-xl z-30 transform transition-transform duration-300 ease-in-out"
+                style={{
+                  gridColumn: '7 / span 2', // Span Saturday and Sunday columns (6th and 7th day columns)
+                  gridRow: '1 / -1', // Span all rows
+                  pointerEvents: 'auto'
+                }}
+                data-testid="overlay-sidebar"
+              >
+                <div className="p-4 h-full overflow-y-auto">
+                  <div className="flex items-center justify-between mb-4">
+                    <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
+                      Tasks
+                    </h2>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={onSidebarClose}
+                      data-testid="button-close-sidebar"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="space-y-6">
+                    <TaskSidebarContent />
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -927,7 +1045,7 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
   );
 }
 
-function TaskSidebar() {
+function TaskSidebarContent() {
   const { toast } = useToast();
   const currentDate = new Date();
 
@@ -950,14 +1068,12 @@ function TaskSidebar() {
 
   if (isLoading) {
     return (
-      <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 p-4">
-        <div className="text-center text-gray-500 dark:text-gray-400">Loading tasks...</div>
-      </div>
+      <div className="text-center text-gray-500 dark:text-gray-400">Loading tasks...</div>
     );
   }
 
   return (
-    <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 p-4" data-testid="task-sidebar">
+    <>
       {/* Date Header */}
       <div className="mb-6">
         <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">{format(currentDate, "MMMM d, yyyy")}</h2>
@@ -992,6 +1108,16 @@ function TaskSidebar() {
         bgColor="bg-gray-50 dark:bg-gray-950/30"
         borderColor="border-gray-200 dark:border-gray-800"
       />
+    </>
+  );
+}
+
+function TaskSidebar() {
+  const currentDate = new Date();
+
+  return (
+    <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 p-4" data-testid="task-sidebar">
+      <TaskSidebarContent />
     </div>
   );
 }
@@ -999,6 +1125,7 @@ function TaskSidebar() {
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [expandedTimeSlot, setExpandedTimeSlot] = useState<{ date: string; hour: number } | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const currentWeekStart = getWeekStart(currentDate);
   const previousWeekStart = addWeeks(currentWeekStart, -1);
@@ -1046,6 +1173,16 @@ export default function Calendar() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                data-testid="button-toggle-sidebar"
+                className="mr-2"
+              >
+                <List className="h-4 w-4 mr-1" />
+                Tasks {sidebarOpen ? '✕' : '→'}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={() => navigateWeek("prev")}
                 data-testid="button-prev-week"
               >
@@ -1064,37 +1201,43 @@ export default function Calendar() {
             </div>
           </div>
 
-          <div className="flex gap-6">
-            {/* Main Calendar Area */}
-            <div className="flex-1 space-y-4">
-              {/* Previous Week */}
-              <WeekView 
-                weekStart={previousWeekStart}
-                currentDate={currentDate}
-                isCurrentWeek={false}
-                expandedTimeSlot={null}
+          {/* Main Calendar Area (Full Width) */}
+          <div className="relative w-full space-y-4">
+            {/* Previous Week */}
+            <WeekView 
+              weekStart={previousWeekStart}
+              currentDate={currentDate}
+              isCurrentWeek={false}
+              expandedTimeSlot={null}
+            />
+            
+            {/* Current Week */}
+            <WeekView 
+              weekStart={currentWeekStart}
+              currentDate={currentDate}
+              isCurrentWeek={true}
+              onTimeBlockClick={handleTimeBlockClick}
+              expandedTimeSlot={expandedTimeSlot}
+              sidebarOpen={sidebarOpen}
+              onSidebarClose={() => setSidebarOpen(false)}
+            />
+            
+            {/* Next Week */}
+            <WeekView 
+              weekStart={nextWeekStart}
+              currentDate={currentDate}
+              isCurrentWeek={false}
+              expandedTimeSlot={null}
+            />
+            
+            {/* Mobile Backdrop */}
+            {sidebarOpen && (
+              <div 
+                className="fixed inset-0 bg-black bg-opacity-20 z-20 md:hidden" 
+                onClick={() => setSidebarOpen(false)}
+                data-testid="sidebar-backdrop"
               />
-              
-              {/* Current Week */}
-              <WeekView 
-                weekStart={currentWeekStart}
-                currentDate={currentDate}
-                isCurrentWeek={true}
-                onTimeBlockClick={handleTimeBlockClick}
-                expandedTimeSlot={expandedTimeSlot}
-              />
-              
-              {/* Next Week */}
-              <WeekView 
-                weekStart={nextWeekStart}
-                currentDate={currentDate}
-                isCurrentWeek={false}
-                expandedTimeSlot={null}
-              />
-            </div>
-
-            {/* Task Sidebar */}
-            <TaskSidebar />
+            )}
           </div>
         </div>
       </div>
