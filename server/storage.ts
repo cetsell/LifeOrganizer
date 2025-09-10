@@ -56,6 +56,107 @@ export class MemStorage implements IStorage {
     this.calendarEvents = new Map();
     this.tasks = new Map();
     this.timeBlockNotes = new Map();
+    
+    // Add dummy data for testing and demonstration
+    this.initializeDummyData();
+  }
+
+  private initializeDummyData() {
+    const today = new Date();
+    const currentWeekStart = new Date(today);
+    currentWeekStart.setDate(today.getDate() - today.getDay() + 1); // Monday of current week
+    
+    // Helper to format dates as YYYY-MM-DD
+    const formatDate = (date: Date) => {
+      return date.toISOString().split('T')[0];
+    };
+
+    // Get dates for current week
+    const monday = formatDate(currentWeekStart);
+    const tuesday = formatDate(new Date(currentWeekStart.getTime() + 24 * 60 * 60 * 1000));
+    const wednesday = formatDate(new Date(currentWeekStart.getTime() + 2 * 24 * 60 * 60 * 1000));
+    const thursday = formatDate(new Date(currentWeekStart.getTime() + 3 * 24 * 60 * 60 * 1000));
+    const friday = formatDate(new Date(currentWeekStart.getTime() + 4 * 24 * 60 * 60 * 1000));
+
+    // Add scheduled tasks (appear in calendar time blocks)
+    const scheduledTasks: Array<Task> = [
+      { id: "task-1", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: monday, scheduledHour: 7, completed: 0 },
+      { id: "task-2", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: monday, scheduledHour: 8, completed: 0 },
+      { id: "task-3", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: tuesday, scheduledHour: 7, completed: 0 },
+      { id: "task-4", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: tuesday, scheduledHour: 8, completed: 0 },
+      { id: "task-5", title: "task name", description: "I really ought to do something but I am already in my paj...", priority: "medium", status: "todo", scheduledDate: wednesday, scheduledHour: 8, completed: 0 },
+      { id: "task-6", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: wednesday, scheduledHour: 9, completed: 0 },
+      { id: "task-7", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: wednesday, scheduledHour: 13, completed: 0 },
+      { id: "task-8", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: thursday, scheduledHour: 7, completed: 0 },
+      { id: "task-9", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: thursday, scheduledHour: 8, completed: 0 },
+      { id: "task-10", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: friday, scheduledHour: 7, completed: 0 },
+      { id: "task-11", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: friday, scheduledHour: 8, completed: 0 }
+    ];
+
+    // Add unscheduled tasks for sidebar (no scheduledDate/scheduledHour)
+    const unscheduledTasks: Array<Task> = [
+      { id: "sidebar-task-1", title: "Name of the task", description: "Did everything just taste purple for a se...", priority: "high", status: "todo", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-2", title: "Another important task", description: null, priority: "medium", status: "todo", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-3", title: "Task with timing", description: "Did everything just taste purple for a se...", priority: "low", status: "todo", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-4", title: "Task with timing", description: "App talks, trirays", priority: "low", status: "todo", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-5", title: "Name of the task", description: "Did everything just taste purple for a se...", priority: "high", status: "upcoming", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-6", title: "Task with timing", description: "App talks, trirays", priority: "low", status: "upcoming", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-7", title: "Name of the task", description: "Did everything just taste purple for a se...", priority: "high", status: "later", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-8", title: "Task with timing", description: "App talks, trirays", priority: "low", status: "later", scheduledDate: null, scheduledHour: null, completed: 0 }
+    ];
+
+    // Add all tasks to storage
+    [...scheduledTasks, ...unscheduledTasks].forEach(task => {
+      this.tasks.set(task.id, task);
+    });
+
+    // Add some time block notes
+    const notes: Array<TimeBlockNote> = [
+      { id: "note-1", date: monday, hour: 6, content: "I really ought to do somet..." },
+      { id: "note-2", date: tuesday, hour: 6, content: "I really ought to do somet..." },
+      { id: "note-3", date: wednesday, hour: 6, content: "I really ought to do something but I am already in my paj..." },
+      { id: "note-4", date: wednesday, hour: 12, content: "I really ought to do something but I am already in my paj..." },
+      { id: "note-5", date: wednesday, hour: 14, content: "I really ought to do something but I am already in my paj..." },
+      { id: "note-6", date: wednesday, hour: 15, content: "I really ought to do something but I am already in my paj..." },
+      { id: "note-7", date: thursday, hour: 6, content: "I really ought to do somet..." },
+      { id: "note-8", date: friday, hour: 6, content: "I really ought to do somet..." }
+    ];
+
+    notes.forEach(note => {
+      this.timeBlockNotes.set(note.id, note);
+    });
+
+    // Add some calendar events
+    const events: Array<CalendarEvent> = [
+      { 
+        id: "event-1", 
+        title: "4 events", 
+        description: "I found a giant ladybug that looks exactly like Leds, Grays, guys? Heldomember is finally gonna settle down, and marry a nice house for dinner! Did everything just taste purple for a second?", 
+        date: wednesday, 
+        hour: 11, 
+        duration: 4 
+      },
+      { 
+        id: "event-2", 
+        title: "Another longer task", 
+        description: null, 
+        date: monday, 
+        hour: 6, 
+        duration: 1 
+      },
+      { 
+        id: "event-3", 
+        title: "Another longer task", 
+        description: null, 
+        date: tuesday, 
+        hour: 9, 
+        duration: 1 
+      }
+    ];
+
+    events.forEach(event => {
+      this.calendarEvents.set(event.id, event);
+    });
   }
 
   // User operations
