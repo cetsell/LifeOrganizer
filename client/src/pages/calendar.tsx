@@ -97,11 +97,47 @@ interface TimeSlotProps {
   tasks: Task[];
   notes: TimeBlockNote[];
   isCurrentHour?: boolean;
+  isExpanded?: boolean;
+  onTimeSlotClick?: (date: string, hour: number) => void;
 }
 
-function TimeSlot({ date, hour, tasks, notes, isCurrentHour }: TimeSlotProps) {
+function TimeSlot({ date, hour, tasks, notes, isCurrentHour, isExpanded, onTimeSlotClick }: TimeSlotProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  
+  // Forms for adding content
+  const noteForm = useForm<z.infer<typeof insertTimeBlockNoteSchema>>({
+    resolver: zodResolver(insertTimeBlockNoteSchema),
+    defaultValues: {
+      date,
+      hour,
+      content: "",
+    },
+  });
+  
+  const taskForm = useForm<z.infer<typeof insertTaskSchema>>({
+    resolver: zodResolver(insertTaskSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      priority: "medium",
+      status: "todo",
+      scheduledDate: date,
+      scheduledHour: hour,
+      completed: false,
+    },
+  });
+  
+  const eventForm = useForm<z.infer<typeof insertCalendarEventSchema>>({
+    resolver: zodResolver(insertCalendarEventSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      date,
+      hour,
+      duration: 1,
+    },
+  });
   
   // Set up drop target for tasks
   const [{ isOver }, drop] = useDrop({
@@ -152,34 +188,310 @@ function TimeSlot({ date, hour, tasks, notes, isCurrentHour }: TimeSlotProps) {
       scheduledHour: hour,
     });
   };
+  
+  // Mutations for creating content
+  const createNoteMutation = useMutation({
+    mutationFn: async (noteData: any) => {
+      const response = await apiRequest("POST", "/api/time-block-notes", noteData);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create note");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/time-block-notes"] });
+      noteForm.reset({ date, hour, content: "" });
+      toast({ title: "Success", description: "Note created successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+  
+  const createTaskMutation = useMutation({
+    mutationFn: async (taskData: any) => {
+      const response = await apiRequest("POST", "/api/tasks", taskData);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create task");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      taskForm.reset({ 
+        title: "", description: "", priority: "medium", status: "todo",
+        scheduledDate: date, scheduledHour: hour, completed: false 
+      });
+      toast({ title: "Success", description: "Task created successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+  
+  const createEventMutation = useMutation({
+    mutationFn: async (eventData: any) => {
+      const response = await apiRequest("POST", "/api/calendar-events", eventData);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to create event");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/calendar-events"] });
+      eventForm.reset({ title: "", description: "", date, hour, duration: 1 });
+      toast({ title: "Success", description: "Event created successfully" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    }
+  });
+  
+  const handleCreateNote = (values: z.infer<typeof insertTimeBlockNoteSchema>) => {
+    createNoteMutation.mutate(values);
+  };
+  
+  const handleCreateTask = (values: z.infer<typeof insertTaskSchema>) => {
+    createTaskMutation.mutate(values);
+  };
+  
+  const handleCreateEvent = (values: z.infer<typeof insertCalendarEventSchema>) => {
+    createEventMutation.mutate(values);
+  };
+  
+  const handleTimeSlotClick = (e: React.MouseEvent) => {
+    // Prevent click when dragging
+    if (e.defaultPrevented) return;
+    e.stopPropagation();
+    onTimeSlotClick?.(date, hour);
+  };
 
   return (
-    <div 
-      ref={drop}
-      className={`h-full w-full p-1 transition-colors ${
-        isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
-      } ${
-        isOver ? "bg-primary/10 dark:bg-primary/5" : ""
-      }`}
-      data-testid={`time-slot-${date}-${hour}`}
-    >
-      {/* Display tasks as colored blocks */}
-      {tasks.map(task => (
-        <TaskBlock key={task.id} task={task} />
-      ))}
+    <>
+      <div 
+        ref={drop}
+        className={`h-full w-full p-1 transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+          isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
+        } ${
+          isOver ? "bg-primary/10 dark:bg-primary/5" : ""
+        } ${
+          isExpanded ? "bg-primary/20 dark:bg-primary/10 border-l-2 border-primary" : ""
+        }`}
+        data-testid={`time-slot-${date}-${hour}`}
+        onClick={handleTimeSlotClick}
+      >
+        {/* Display tasks as colored blocks */}
+        {tasks.map(task => (
+          <TaskBlock key={task.id} task={task} />
+        ))}
+        
+        {/* Display notes */}
+        {notes.map(note => (
+          <div 
+            key={note.id} 
+            className="px-2 py-1 mb-1 rounded text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border border-purple-200 dark:border-purple-700"
+            data-testid={`note-block-${note.id}`}
+          >
+            <div className="text-xs opacity-75">Note: {note.content.substring(0, 20)}{note.content.length > 20 ? '...' : ''}</div>
+          </div>
+        ))}
+        
+        {/* Click indicator when empty */}
+        {tasks.length === 0 && notes.length === 0 && (
+          <div className="flex items-center justify-center h-full opacity-0 hover:opacity-50 transition-opacity">
+            <Plus className="h-3 w-3 text-gray-400" />
+          </div>
+        )}
+      </div>
       
-      {/* Display notes */}
-      {notes.map(note => (
-        <div 
-          key={note.id} 
-          className="px-2 py-1 mb-1 rounded text-xs bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border border-purple-200 dark:border-purple-700"
-          data-testid={`note-block-${note.id}`}
-        >
-          <div className="text-xs opacity-75">Note</div>
-        </div>
-      ))}
-    </div>
-  );
+      {/* Expandable Forms Section */}
+      {isExpanded && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => onTimeSlotClick?.(date, hour)}>
+            <div 
+              className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-xl p-4 max-w-md w-full mx-4 max-h-[80vh] overflow-y-auto" 
+              onClick={(e) => e.stopPropagation()}
+              data-testid={`expanded-forms-${date}-${hour}`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="font-medium text-gray-900 dark:text-gray-100">
+                  {formatTime(hour)} on {format(new Date(date), "MMM d, yyyy")}
+                </h3>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => onTimeSlotClick?.(date, hour)}
+                  data-testid="button-close-expanded"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="space-y-6">
+                {/* Note Form */}
+                <div className="space-y-3">
+                  <h4 className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <FileText className="h-4 w-4" />
+                    Add Note
+                  </h4>
+                  <Form {...noteForm}>
+                    <form onSubmit={noteForm.handleSubmit(handleCreateNote)} className="space-y-3">
+                      <FormField
+                        control={noteForm.control}
+                        name="content"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Textarea placeholder="Add a note for this time slot..." rows={2} {...field} data-testid="input-note-content" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        size="sm"
+                        type="submit"
+                        disabled={createNoteMutation.isPending || !noteForm.formState.isValid}
+                        data-testid="button-create-note"
+                      >
+                        <Save className="h-3 w-3 mr-1" />
+                        {createNoteMutation.isPending ? 'Saving...' : 'Add Note'}
+                      </Button>
+                    </form>
+                  </Form>
+                </div>
+                
+                {/* Task Form */}
+                <div className="space-y-3">
+                  <h4 className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <CheckSquare className="h-4 w-4" />
+                    Add Task
+                  </h4>
+                  <Form {...taskForm}>
+                    <form onSubmit={taskForm.handleSubmit(handleCreateTask)} className="space-y-3">
+                      <FormField
+                        control={taskForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="Task title..." {...field} data-testid="input-task-title-expanded" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={taskForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Textarea placeholder="Description (optional)..." rows={2} {...field} value={field.value || ""} data-testid="input-task-description-expanded" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={taskForm.control}
+                        name="priority"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-task-priority-expanded">
+                                  <SelectValue placeholder="Select priority" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="low">Low Priority</SelectItem>
+                                <SelectItem value="medium">Medium Priority</SelectItem>
+                                <SelectItem value="high">High Priority</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        size="sm"
+                        type="submit"
+                        disabled={createTaskMutation.isPending || !taskForm.formState.isValid}
+                        data-testid="button-create-task"
+                      >
+                        <Save className="h-3 w-3 mr-1" />
+                        {createTaskMutation.isPending ? 'Creating...' : 'Add Task'}
+                      </Button>
+                    </form>
+                  </Form>
+                </div>
+                
+                {/* Event Form */}
+                <div className="space-y-3">
+                  <h4 className="flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <CalendarIcon className="h-4 w-4" />
+                    Add Event
+                  </h4>
+                  <Form {...eventForm}>
+                    <form onSubmit={eventForm.handleSubmit(handleCreateEvent)} className="space-y-3">
+                      <FormField
+                        control={eventForm.control}
+                        name="title"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Input placeholder="Event title..." {...field} data-testid="input-event-title" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={eventForm.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Textarea placeholder="Description (optional)..." rows={2} {...field} value={field.value || ""} data-testid="input-event-description" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={eventForm.control}
+                        name="duration"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Duration (hours)</FormLabel>
+                            <FormControl>
+                              <Input type="number" min="1" max="12" {...field} value={field.value || 1} onChange={(e) => field.onChange(parseInt(e.target.value) || 1)} data-testid="input-event-duration" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <Button
+                        size="sm"
+                        type="submit"
+                        disabled={createEventMutation.isPending || !eventForm.formState.isValid}
+                        data-testid="button-create-event"
+                      >
+                        <Save className="h-3 w-3 mr-1" />
+                        {createEventMutation.isPending ? 'Creating...' : 'Add Event'}
+                      </Button>
+                    </form>
+                  </Form>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
+    );
 }
 
 interface WeekViewProps {
@@ -187,9 +499,10 @@ interface WeekViewProps {
   currentDate: Date;
   isCurrentWeek: boolean;
   onTimeBlockClick?: (date: string, hour: number) => void;
+  expandedTimeSlot?: { date: string; hour: number } | null;
 }
 
-function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick }: WeekViewProps) {
+function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, expandedTimeSlot }: WeekViewProps) {
   const weekEnd = addDays(weekStart, 6);
   const startDate = formatDate(weekStart);
   const endDate = formatDate(weekEnd);
@@ -310,6 +623,8 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick }: W
                           tasks={dayTasks}
                           notes={dayNotes}
                           isCurrentHour={isCurrentHour}
+                          isExpanded={expandedTimeSlot?.date === dateStr && expandedTimeSlot?.hour === hour}
+                          onTimeSlotClick={onTimeBlockClick}
                         />
                       </div>
                     );
@@ -683,6 +998,7 @@ function TaskSidebar() {
 
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [expandedTimeSlot, setExpandedTimeSlot] = useState<{ date: string; hour: number } | null>(null);
 
   const currentWeekStart = getWeekStart(currentDate);
   const previousWeekStart = addWeeks(currentWeekStart, -1);
@@ -695,6 +1011,15 @@ export default function Calendar() {
 
   const goToToday = () => {
     setCurrentDate(new Date());
+  };
+  
+  const handleTimeBlockClick = (date: string, hour: number) => {
+    // Toggle expanded state - close if already expanded, open if not
+    if (expandedTimeSlot?.date === date && expandedTimeSlot?.hour === hour) {
+      setExpandedTimeSlot(null);
+    } else {
+      setExpandedTimeSlot({ date, hour });
+    }
   };
 
   return (
@@ -747,6 +1072,7 @@ export default function Calendar() {
                 weekStart={previousWeekStart}
                 currentDate={currentDate}
                 isCurrentWeek={false}
+                expandedTimeSlot={null}
               />
               
               {/* Current Week */}
@@ -754,6 +1080,8 @@ export default function Calendar() {
                 weekStart={currentWeekStart}
                 currentDate={currentDate}
                 isCurrentWeek={true}
+                onTimeBlockClick={handleTimeBlockClick}
+                expandedTimeSlot={expandedTimeSlot}
               />
               
               {/* Next Week */}
@@ -761,6 +1089,7 @@ export default function Calendar() {
                 weekStart={nextWeekStart}
                 currentDate={currentDate}
                 isCurrentWeek={false}
+                expandedTimeSlot={null}
               />
             </div>
 
