@@ -1075,21 +1075,10 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
             No {title.toLowerCase()} tasks
           </div>
         )}
-            
-            {/* Add Task Button */}
-            <div className="pt-2">
-              {!showAddForm ? (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="w-full"
-                  onClick={() => setShowAddForm(true)}
-                  data-testid={`button-add-${status}-task`}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  Add {title} Task
-                </Button>
-              ) : (
+      </div>
+      
+      {/* Add Task Form */}
+      {showAddForm && (
                 <div className="space-y-3 p-3 border border-border dark:border-border rounded bg-muted/30 dark:bg-muted/20">
                   <Form {...addTaskForm}>
                     <form onSubmit={addTaskForm.handleSubmit(handleAddTask)} className="space-y-3">
@@ -1191,8 +1180,6 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
                   </Form>
                 </div>
               )}
-            </div>
-      </div>
       
       {/* Edit Task Form */}
       {editingTask && (
