@@ -24,6 +24,7 @@ export const tasks = pgTable("tasks", {
   description: text("description"),
   priority: varchar("priority").notNull().default("medium"), // low, medium, high
   status: varchar("status").notNull().default("todo"), // todo, upcoming, later
+  color: varchar("color").default("blue"), // Task color for calendar display
   scheduledDate: varchar("scheduled_date"), // YYYY-MM-DD format (null if unscheduled)
   scheduledHour: integer("scheduled_hour"), // 0-23 (null if unscheduled)
   completed: integer("completed").default(0), // 0 or 1 (boolean)

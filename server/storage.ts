@@ -80,29 +80,29 @@ export class MemStorage implements IStorage {
 
     // Add scheduled tasks (appear in calendar time blocks)
     const scheduledTasks: Array<Task> = [
-      { id: "task-1", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: monday, scheduledHour: 7, completed: 0 },
-      { id: "task-2", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: monday, scheduledHour: 8, completed: 0 },
-      { id: "task-3", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: tuesday, scheduledHour: 7, completed: 0 },
-      { id: "task-4", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: tuesday, scheduledHour: 8, completed: 0 },
-      { id: "task-5", title: "task name", description: "I really ought to do something but I am already in my paj...", priority: "medium", status: "todo", scheduledDate: wednesday, scheduledHour: 8, completed: 0 },
-      { id: "task-6", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: wednesday, scheduledHour: 9, completed: 0 },
-      { id: "task-7", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: wednesday, scheduledHour: 13, completed: 0 },
-      { id: "task-8", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: thursday, scheduledHour: 7, completed: 0 },
-      { id: "task-9", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: thursday, scheduledHour: 8, completed: 0 },
-      { id: "task-10", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: friday, scheduledHour: 7, completed: 0 },
-      { id: "task-11", title: "task name", description: null, priority: "medium", status: "todo", scheduledDate: friday, scheduledHour: 8, completed: 0 }
+      { id: "task-1", title: "task name", description: null, priority: "medium", status: "todo", color: "blue", scheduledDate: monday, scheduledHour: 7, completed: 0 },
+      { id: "task-2", title: "task name", description: null, priority: "medium", status: "todo", color: "green", scheduledDate: monday, scheduledHour: 8, completed: 0 },
+      { id: "task-3", title: "task name", description: null, priority: "medium", status: "todo", color: "purple", scheduledDate: tuesday, scheduledHour: 7, completed: 0 },
+      { id: "task-4", title: "task name", description: null, priority: "medium", status: "todo", color: "orange", scheduledDate: tuesday, scheduledHour: 8, completed: 0 },
+      { id: "task-5", title: "task name", description: "I really ought to do something but I am already in my paj...", priority: "medium", status: "todo", color: "blue", scheduledDate: wednesday, scheduledHour: 8, completed: 0 },
+      { id: "task-6", title: "task name", description: null, priority: "medium", status: "todo", color: "green", scheduledDate: wednesday, scheduledHour: 9, completed: 0 },
+      { id: "task-7", title: "task name", description: null, priority: "medium", status: "todo", color: "purple", scheduledDate: wednesday, scheduledHour: 13, completed: 0 },
+      { id: "task-8", title: "task name", description: null, priority: "medium", status: "todo", color: "orange", scheduledDate: thursday, scheduledHour: 7, completed: 0 },
+      { id: "task-9", title: "task name", description: null, priority: "medium", status: "todo", color: "blue", scheduledDate: thursday, scheduledHour: 8, completed: 0 },
+      { id: "task-10", title: "task name", description: null, priority: "medium", status: "todo", color: "green", scheduledDate: friday, scheduledHour: 7, completed: 0 },
+      { id: "task-11", title: "task name", description: null, priority: "medium", status: "todo", color: "purple", scheduledDate: friday, scheduledHour: 8, completed: 0 }
     ];
 
     // Add unscheduled tasks for sidebar (no scheduledDate/scheduledHour)
     const unscheduledTasks: Array<Task> = [
-      { id: "sidebar-task-1", title: "Name of the task", description: "Did everything just taste purple for a se...", priority: "high", status: "todo", scheduledDate: null, scheduledHour: null, completed: 0 },
-      { id: "sidebar-task-2", title: "Another important task", description: null, priority: "medium", status: "todo", scheduledDate: null, scheduledHour: null, completed: 0 },
-      { id: "sidebar-task-3", title: "Task with timing", description: "Did everything just taste purple for a se...", priority: "low", status: "todo", scheduledDate: null, scheduledHour: null, completed: 0 },
-      { id: "sidebar-task-4", title: "Task with timing", description: "App talks, trirays", priority: "low", status: "todo", scheduledDate: null, scheduledHour: null, completed: 0 },
-      { id: "sidebar-task-5", title: "Name of the task", description: "Did everything just taste purple for a se...", priority: "high", status: "upcoming", scheduledDate: null, scheduledHour: null, completed: 0 },
-      { id: "sidebar-task-6", title: "Task with timing", description: "App talks, trirays", priority: "low", status: "upcoming", scheduledDate: null, scheduledHour: null, completed: 0 },
-      { id: "sidebar-task-7", title: "Name of the task", description: "Did everything just taste purple for a se...", priority: "high", status: "later", scheduledDate: null, scheduledHour: null, completed: 0 },
-      { id: "sidebar-task-8", title: "Task with timing", description: "App talks, trirays", priority: "low", status: "later", scheduledDate: null, scheduledHour: null, completed: 0 }
+      { id: "sidebar-task-1", title: "Name of the task", description: "Did everything just taste purple for a se...", priority: "high", status: "todo", color: "green", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-2", title: "Another important task", description: null, priority: "medium", status: "todo", color: "orange", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-3", title: "Task with timing", description: "Did everything just taste purple for a se...", priority: "low", status: "todo", color: "purple", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-4", title: "Task with timing", description: "App talks, trirays", priority: "low", status: "todo", color: "purple", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-5", title: "Name of the task", description: "Did everything just taste purple for a se...", priority: "high", status: "upcoming", color: "green", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-6", title: "Task with timing", description: "App talks, trirays", priority: "low", status: "upcoming", color: "purple", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-7", title: "Name of the task", description: "Did everything just taste purple for a se...", priority: "high", status: "later", color: "green", scheduledDate: null, scheduledHour: null, completed: 0 },
+      { id: "sidebar-task-8", title: "Task with timing", description: "App talks, trirays", priority: "low", status: "later", color: "purple", scheduledDate: null, scheduledHour: null, completed: 0 }
     ];
 
     // Add all tasks to storage
@@ -262,6 +262,7 @@ export class MemStorage implements IStorage {
       ...insertTask, 
       id,
       description: insertTask.description ?? null,
+      color: insertTask.color ?? "blue",
       scheduledDate: insertTask.scheduledDate ?? null,
       scheduledHour: insertTask.scheduledHour ?? null,
       completed: insertTask.completed ? 1 : 0
@@ -281,6 +282,7 @@ export class MemStorage implements IStorage {
       description: ('description' in updateData) ? (updateData.description ?? null) : task.description,
       priority: updateData.priority ?? task.priority,
       status: updateData.status ?? task.status,
+      color: ('color' in updateData) ? (updateData.color ?? null) : task.color,
       scheduledDate: ('scheduledDate' in updateData) ? (updateData.scheduledDate ?? null) : task.scheduledDate,
       scheduledHour: ('scheduledHour' in updateData) ? (updateData.scheduledHour ?? null) : task.scheduledHour,
       completed: updateData.completed !== undefined ? (updateData.completed ? 1 : 0) : task.completed

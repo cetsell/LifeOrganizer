@@ -534,11 +534,10 @@ interface WeekViewProps {
   onTimeBlockClick?: (date: string, hour: number) => void;
   expandedTimeSlot?: { date: string; hour: number } | null;
   setExpandedTimeSlot?: (value: { date: string; hour: number } | null) => void;
-  sidebarOpen?: boolean;
-  onSidebarClose?: () => void;
+  onDayClick?: (date: Date) => void;
 }
 
-function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, expandedTimeSlot, setExpandedTimeSlot, sidebarOpen, onSidebarClose }: WeekViewProps) {
+function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, expandedTimeSlot, setExpandedTimeSlot, onDayClick }: WeekViewProps) {
   const weekEnd = addDays(weekStart, 6);
   const startDate = formatDate(weekStart);
   const endDate = formatDate(weekEnd);
@@ -745,37 +744,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
               );
             })}
             
-            {/* Sidebar Overlay - positioned as grid item spanning last available columns */}
-            {isCurrentWeek && sidebarOpen && (
-              <div 
-                className="bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-xl z-30 transform transition-transform duration-300 ease-in-out"
-                style={{
-                  gridColumn: `${Math.max(1, visibleDayIndices.length - 1)} / span 2`, // Span last 2 visible columns
-                  gridRow: '1 / -1', // Span all rows
-                  pointerEvents: 'auto'
-                }}
-                data-testid="overlay-sidebar"
-              >
-                <div className="p-4 h-full overflow-y-auto">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">
-                      Tasks
-                    </h2>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={onSidebarClose}
-                      data-testid="button-close-sidebar"
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  </div>
-                  <div className="space-y-6">
-                    <TaskSidebarContent />
-                  </div>
-                </div>
-              </div>
-            )}
+            {/* Sidebar overlay removed - now using fixed right sidebar */}
           </div>
         </CardContent>
       </Card>
@@ -798,14 +767,21 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             const dayNotes = notes.filter(note => note.date === dateStr);
             const hasContent = dayEvents.length > 0 || dayTasks.length > 0 || dayNotes.length > 0;
             
+            const handleDayClick = () => {
+              if (onDayClick) {
+                onDayClick(date);
+              }
+            };
+            
             return (
               <div 
                 key={day}
-                className={`p-2 min-h-10 text-xs rounded border ${
+                className={`p-2 min-h-10 text-xs rounded border cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors ${
                   hasContent 
                     ? "bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700" 
                     : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
                 }`}
+                onClick={handleDayClick}
                 data-testid={`condensed-day-${day.toLowerCase()}`}
               >
                 <div className="text-center font-medium text-gray-700 dark:text-gray-300">
@@ -949,16 +925,65 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
     <div className="mb-6" data-testid={`task-section-${status}`}>
       <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
         <CollapsibleTrigger asChild>
-          <div className="flex items-center justify-between p-2 hover:bg-muted/50 dark:hover:bg-muted/30 rounded cursor-pointer" data-testid={`section-header-${status}`}>
-            <div className="flex items-center gap-2">
-              <h3 className="font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+          <div className="p-2 hover:bg-muted/50 dark:hover:bg-muted/30 rounded cursor-pointer" data-testid={`section-header-${status}`}>
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <h3 className="font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+              </div>
+              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
             </div>
-            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            
+            {/* Preview when collapsed - show 1-3 lines or 2 lines + collapsed pills */}
+            {!isExpanded && tasks.length > 0 && (
+              <div className="space-y-1" data-testid={`preview-${status}`}>
+                {tasks.length <= 3 ? (
+                  // Show all tasks when 3 or fewer
+                  tasks.map(task => (
+                    <div 
+                      key={task.id}
+                      className="text-xs text-gray-600 dark:text-gray-400 truncate px-2"
+                      title={task.title}
+                    >
+                      {task.title}
+                    </div>
+                  ))
+                ) : (
+                  // Show first 2 tasks + collapsed pills row when more than 3
+                  <>
+                    {tasks.slice(0, 2).map(task => (
+                      <div 
+                        key={task.id}
+                        className="text-xs text-gray-600 dark:text-gray-400 truncate px-2"
+                        title={task.title}
+                      >
+                        {task.title}
+                      </div>
+                    ))}
+                    <div className="flex flex-wrap gap-1 px-2">
+                      {tasks.slice(2).map(task => (
+                        <div 
+                          key={task.id}
+                          className="px-1.5 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 truncate max-w-16"
+                          title={task.title}
+                          data-testid={`preview-pill-${task.id}`}
+                        >
+                          {task.title}
+                        </div>
+                      ))}
+                      <div className="px-1.5 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400 font-medium">
+                        +{tasks.length - 2}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
         </CollapsibleTrigger>
         
         <CollapsibleContent className="mt-2">
           <div className="space-y-2">
+            {/* Full task list when expanded - all tasks visible for full functionality */}
             {tasks.map(task => (
               <DraggableTask 
                 key={task.id}
@@ -1100,11 +1125,6 @@ function TaskSidebarContent() {
 
   return (
     <>
-      {/* Date Header */}
-      <div className="mb-6">
-        <h2 className="text-lg font-medium text-gray-900 dark:text-gray-100">{format(currentDate, "MMMM d, yyyy")}</h2>
-      </div>
-
       {/* To-Do Section */}
       <TaskSidebarSection 
         title={`TO-DO (${todoTasks.length})`}
@@ -1151,7 +1171,6 @@ function TaskSidebar() {
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [expandedTimeSlot, setExpandedTimeSlot] = useState<{ date: string; hour: number } | null>(null);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const currentWeekStart = getWeekStart(currentDate);
   const previousWeekStart = addWeeks(currentWeekStart, -1);
@@ -1174,67 +1193,27 @@ export default function Calendar() {
       setExpandedTimeSlot({ date, hour });
     }
   };
+  
+  const handleDayClick = (date: Date) => {
+    // Navigate to the week containing this date and expand the day at noon
+    setCurrentDate(date);
+    const dateStr = formatDate(date);
+    setExpandedTimeSlot({ date: dateStr, hour: 12 }); // Default to noon
+  };
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 p-4" data-testid="calendar-page">
-        <div className="max-w-full mx-auto">
-          {/* Header */}
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100" data-testid="page-title">
-                Time Block Calendar
-              </h1>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={goToToday}
-                data-testid="button-today"
-              >
-                Today
-              </Button>
-            </div>
-            
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setSidebarOpen(!sidebarOpen)}
-                data-testid="button-toggle-sidebar"
-                className="mr-2"
-              >
-                <List className="h-4 w-4 mr-1" />
-                Tasks {sidebarOpen ? '✕' : '→'}
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigateWeek("prev")}
-                data-testid="button-prev-week"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                Previous Week
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigateWeek("next")}
-                data-testid="button-next-week"
-              >
-                Next Week
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
-
-          {/* Main Calendar Area (Full Width) */}
-          <div className="relative w-full space-y-4">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex" data-testid="calendar-page">
+        {/* Main Calendar Area */}
+        <div className="flex-1 p-4 pr-0">
+          <div className="w-full space-y-4">
             {/* Previous Week */}
             <WeekView 
               weekStart={previousWeekStart}
               currentDate={currentDate}
               isCurrentWeek={false}
               expandedTimeSlot={null}
+              onDayClick={handleDayClick}
             />
             
             {/* Current Week */}
@@ -1245,8 +1224,6 @@ export default function Calendar() {
               onTimeBlockClick={handleTimeBlockClick}
               expandedTimeSlot={expandedTimeSlot}
               setExpandedTimeSlot={setExpandedTimeSlot}
-              sidebarOpen={sidebarOpen}
-              onSidebarClose={() => setSidebarOpen(false)}
             />
             
             {/* Next Week */}
@@ -1255,16 +1232,56 @@ export default function Calendar() {
               currentDate={currentDate}
               isCurrentWeek={false}
               expandedTimeSlot={null}
+              onDayClick={handleDayClick}
             />
             
-            {/* Mobile Backdrop */}
-            {sidebarOpen && (
-              <div 
-                className="fixed inset-0 bg-black bg-opacity-20 z-20 md:hidden" 
-                onClick={() => setSidebarOpen(false)}
-                data-testid="sidebar-backdrop"
-              />
-            )}
+          </div>
+        </div>
+        
+        {/* Fixed Right Sidebar */}
+        <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 h-screen overflow-y-auto" data-testid="fixed-sidebar">
+          <div className="p-4">
+            {/* Date Display */}
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100" data-testid="current-date">
+                {format(currentDate, "MMMM d, yyyy")}
+              </h2>
+            </div>
+            
+            {/* Week Navigation */}
+            <div className="flex items-center gap-2 mb-6">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigateWeek("prev")}
+                data-testid="button-prev-week"
+                className="flex-1"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                Previous
+              </Button>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={goToToday}
+                data-testid="button-today"
+              >
+                Today
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => navigateWeek("next")}
+                data-testid="button-next-week"
+                className="flex-1"
+              >
+                Next
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+            
+            {/* Task Sidebar Content */}
+            <TaskSidebarContent />
           </div>
         </div>
       </div>
