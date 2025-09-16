@@ -43,7 +43,7 @@ interface EventContinuationProps {
 function EventContinuation({ event }: EventContinuationProps) {
   return (
     <div 
-      className="inline-flex px-1.5 pt-0.5 text-xs rounded truncate bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
+      className="inline-flex px-1.5 pt-0.5 pb-0 text-xs rounded truncate bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
       data-testid={`event-continuation-${event.id}`}
       style={{ maxWidth: '100%' }}
     >
@@ -274,7 +274,9 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
   // Render collapsed content (single line with truncation)
   const renderCollapsedContent = () => {
     const allItems = [...tasks, ...notes, ...events];
-    if (allItems.length === 0) {
+    const totalItems = allItems.length + continuationEvents.length;
+    
+    if (totalItems === 0) {
       return (
         <div className="flex items-center justify-center h-full opacity-0 hover:opacity-50 transition-opacity">
           <Plus className="h-3 w-3 text-gray-400" />
@@ -294,7 +296,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
             return (
               <div 
                 key={`task-${task.id}`}
-                className={`inline-flex px-1.5 pt-0.5 text-xs rounded truncate ${getPriorityColor(task.priority)}`}
+                className={`inline-flex px-1.5 pt-0.5 pb-0 text-xs rounded truncate ${getPriorityColor(task.priority)}`}
                 style={{ maxWidth: '100%' }}
               >
                 {task.title}
@@ -306,7 +308,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
             return (
               <div 
                 key={`note-${note.id}`}
-                className="inline-flex px-1.5 pt-0.5 text-xs rounded truncate bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
+                className="inline-flex px-1.5 pt-0.5 pb-0 text-xs rounded truncate bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
                 style={{ maxWidth: '100%' }}
               >
                 {note.content}
@@ -318,7 +320,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
             return (
               <div 
                 key={`event-${event.id}`}
-                className="inline-flex px-1.5 pt-0.5 text-xs rounded truncate bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                className="inline-flex px-1.5 pt-0.5 pb-0 text-xs rounded truncate bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
                 style={{ maxWidth: '100%' }}
               >
                 {event.title}
@@ -326,8 +328,12 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
             );
           }
         })}
+        {/* Render continuation indicators inline with other items */}
+        {continuationEvents.map(event => (
+          <EventContinuation key={`continuation-${event.id}`} event={event} />
+        ))}
         {remainingCount > 0 && (
-          <div className="inline-flex px-1.5 pt-0.5 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+          <div className="inline-flex px-1.5 pt-0.5 pb-0 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
             +{remainingCount}
           </div>
         )}
@@ -444,10 +450,6 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
         <div className="p-1 h-full relative overflow-hidden">
           <div className="w-full h-full overflow-hidden">
             {renderCollapsedContent()}
-            {/* Render continuation indicators for multi-hour events */}
-            {continuationEvents.map(event => (
-              <EventContinuation key={`continuation-${event.id}`} event={event} />
-            ))}
           </div>
         </div>
       )}
