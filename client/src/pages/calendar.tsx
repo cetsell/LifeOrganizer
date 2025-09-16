@@ -329,50 +329,53 @@ function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded,
   return (
     <div 
       ref={drop}
-      className={`h-full w-full relative transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+      className={`w-full relative transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
         isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
       } ${
         isOver ? "bg-primary/10 dark:bg-primary/5" : ""
       } ${
         isExpanded ? "bg-primary/20 dark:bg-primary/10 border-l-2 border-primary" : ""
-      }`}
+      } ${isExpanded ? "h-auto min-h-[180px]" : "h-12"}`}
       data-testid={`time-slot-${date}-${hour}`}
       onClick={handleTimeSlotClick}
     >
-      {/* Collapsed header row */}
-      <div className="p-1">
-        {renderCollapsedContent()}
-      </div>
-      
-      {/* Simplified Inline Expansion - Large Text Area */}
-      {isExpanded && (
-        <div className="absolute top-full left-0 right-0 bg-white dark:bg-gray-900 z-20 p-3 space-y-3" data-testid={`expanded-notes-${date}-${hour}`}>
+      {isExpanded ? (
+        <div className="p-3 h-full flex flex-col" data-testid={`expanded-notes-${date}-${hour}`}>
           {/* Time Header */}
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
               {formatTime(hour)} {format(new Date(date), "M/d/yy")}
             </div>
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setShowEventModal(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowEventModal(true);
+              }}
               data-testid="button-add-event"
-              className="h-8 px-3 text-sm"
+              className="h-7 px-2 text-xs"
             >
-              <Plus className="h-4 w-4 mr-1" />
+              <Plus className="h-3 w-3 mr-1" />
               event
             </Button>
           </div>
           
-          {/* Large Text Area for Notes */}
-          <Textarea
+          {/* Natural Text Area */}
+          <textarea
             value={noteContent}
             onChange={(e) => setNoteContent(e.target.value)}
             onBlur={handleNoteBlur}
-            placeholder="I found a giant, hideous ape that looks exactly like Leela. Guys, guys! Hedonismbot is finally gonna settle down, and marry a nice house in the suburbs. I'm looking for something beautiful and cheap for a lady who is one of those things! Did everything just taste purple for a second?"
-            className="w-full min-h-[120px] resize-none border-0 bg-transparent text-gray-900 dark:text-gray-100 text-sm leading-relaxed focus:ring-0 focus:outline-none"
+            onClick={(e) => e.stopPropagation()}
+            placeholder=""
+            className="flex-1 w-full resize-none border-0 bg-transparent text-gray-900 dark:text-gray-100 text-sm leading-relaxed focus:ring-0 focus:outline-none p-0"
             data-testid="textarea-notes"
+            autoFocus
           />
+        </div>
+      ) : (
+        <div className="p-1 h-full">
+          {renderCollapsedContent()}
         </div>
       )}
       
@@ -591,7 +594,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                   className="relative border-r border-gray-100 dark:border-gray-800 last:border-r-0"
                   style={{
                     display: 'grid',
-                    gridTemplateRows: 'repeat(24, 3rem)',
+                    gridTemplateRows: 'repeat(24, minmax(3rem, auto))',
                     gridTemplateColumns: '1fr'
                   }}
                   data-testid={`day-column-${dateStr}`}
