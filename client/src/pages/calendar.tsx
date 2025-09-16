@@ -763,8 +763,8 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
   return (
     <Card className="w-full bg-gray-50 dark:bg-gray-800/30 shadow-sm" data-testid="condensed-week">
       <CardContent className="p-3">
-        <h3 className="text-sm font-medium text-center text-gray-600 dark:text-gray-400 mb-3">
-          {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
+        <h3 className="text-sm font-medium text-left text-gray-600 dark:text-gray-400 mb-3">
+          {weekStart < new Date() ? "Previous week" : "Next week"}
         </h3>
         <div className="grid grid-cols-7 gap-1">
           {DAYS_OF_WEEK.map((day, index) => {
