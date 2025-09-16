@@ -35,29 +35,18 @@ const ItemTypes = {
   TASK: 'task',
 };
 
-// Component for rendering events that span multiple hours
-interface SpanningEventProps {
+// Component for rendering event continuation indicators
+interface EventContinuationProps {
   event: CalendarEvent;
-  isCurrentHour?: boolean;
 }
 
-function SpanningEvent({ event, isCurrentHour }: SpanningEventProps) {
-  const duration = event.duration || 1;
-  const startHour = event.hour;
-  
+function EventContinuation({ event }: EventContinuationProps) {
   return (
-    <div 
-      className="mx-1 px-2 py-1 rounded text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 z-10 flex flex-col justify-start pointer-events-none"
-      style={{
-        gridRow: `${startHour + 1} / span ${duration}`,
-        gridColumn: 1,
-      }}
-      data-testid={`spanning-event-${event.id}`}
-    >
-      <div className="font-medium truncate">{event.title}</div>
-      {duration > 1 && (
-        <div className="text-xs opacity-75">{duration}h</div>
-      )}
+    <div className="flex items-center justify-start pl-1 py-0.5">
+      <div 
+        className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400"
+        data-testid={`event-continuation-${event.id}`}
+      />
     </div>
   );
 }
@@ -96,13 +85,14 @@ interface TimeSlotProps {
   tasks: Task[];
   notes: TimeBlockNote[];
   events: CalendarEvent[];
+  continuationEvents: CalendarEvent[];
   isCurrentHour?: boolean;
   isExpanded?: boolean;
   isDayExpanded?: boolean;
   onTimeSlotClick?: (date: string, hour: number) => void;
 }
 
-function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded, isDayExpanded, onTimeSlotClick }: TimeSlotProps) {
+function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurrentHour, isExpanded, isDayExpanded, onTimeSlotClick }: TimeSlotProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [noteContent, setNoteContent] = useState("");
@@ -441,15 +431,9 @@ function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded,
       ) : (
         <div className="p-1 h-full relative">
           {renderCollapsedContent()}
-          {/* Render spanning events inline within time slot */}
-          {events.filter(event => event.hour === hour && (event.duration || 1) > 1).map(event => (
-            <div 
-              key={`inline-event-${event.id}`}
-              className="absolute top-0 left-0 right-0 bottom-0 mx-1 px-2 py-1 rounded text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 z-10 flex flex-col justify-start pointer-events-none"
-            >
-              <div className="font-medium truncate">{event.title}</div>
-              <div className="text-xs opacity-75">{event.duration || 1}h</div>
-            </div>
+          {/* Render continuation indicators for multi-hour events */}
+          {continuationEvents.map(event => (
+            <EventContinuation key={`continuation-${event.id}`} event={event} />
           ))}
         </div>
       )}
@@ -588,6 +572,21 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
     queryKey: ["/api/calendar-events", startDate, endDate],
     queryFn: () => fetch(`/api/calendar-events?startDate=${startDate}&endDate=${endDate}`).then(res => res.json())
   });
+  
+  // Helper to get events that should show continuation indicators at a specific time
+  const getContinuationEvents = (date: string, hour: number) => {
+    return events.filter(event => {
+      const eventDuration = event.duration || 1;
+      const eventStartHour = event.hour;
+      const eventEndHour = eventStartHour + eventDuration;
+      
+      return (
+        event.date === date &&
+        hour > eventStartHour && 
+        hour < eventEndHour
+      );
+    });
+  };
 
   const { data: tasks = [] } = useQuery<Task[]>({
     queryKey: ["/api/tasks", startDate, endDate],
@@ -696,10 +695,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                   }}
                   data-testid={`day-column-${dateStr}`}
                 >
-                  {/* Render spanning events - but only for display, actual interaction handled in TimeSlot */}
-                  {dayEvents.filter(event => (event.duration || 1) > 1).map(event => (
-                    <SpanningEvent key={event.id} event={event} />
-                  ))}
+                  {/* No more spanning events - multi-hour events now handled in TimeSlot */}
                   
                   {/* Render time slots for tasks and notes */}
                   {HOURS.map(hour => {
@@ -721,6 +717,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                           tasks={dayTasks}
                           notes={dayNotes}
                           events={events.filter(event => event.date === dateStr && event.hour === hour)}
+                          continuationEvents={getContinuationEvents(dateStr, hour)}
                           isCurrentHour={isCurrentHour}
                           isExpanded={expandedTimeSlot?.date === dateStr && expandedTimeSlot?.hour === hour}
                           isDayExpanded={expandedTimeSlot?.date === dateStr}

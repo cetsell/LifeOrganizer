@@ -126,7 +126,7 @@ export class MemStorage implements IStorage {
       this.timeBlockNotes.set(note.id, note);
     });
 
-    // Add some calendar events (all single-hour to avoid layout issues)
+    // Add some calendar events including multi-hour ones for proper continuation indicator testing
     const events: Array<CalendarEvent> = [
       { 
         id: "event-2", 
@@ -143,6 +143,22 @@ export class MemStorage implements IStorage {
         date: tuesday, 
         hour: 9, 
         duration: 1 
+      },
+      {
+        id: "event-4",
+        title: "Order the supplies",
+        description: "Multi-hour event for testing continuation indicators",
+        date: wednesday,
+        hour: 9,
+        duration: 3
+      },
+      {
+        id: "event-5",
+        title: "Prep for Friday",
+        description: "Another multi-hour event",
+        date: wednesday,
+        hour: 12,
+        duration: 2
       }
     ];
 
