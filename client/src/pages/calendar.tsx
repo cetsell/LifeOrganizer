@@ -45,9 +45,8 @@ function EventContinuation({ event }: EventContinuationProps) {
     <div 
       className="inline-flex px-1.5 pt-0.5 pb-0 text-xs rounded truncate bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
       data-testid={`event-continuation-${event.id}`}
-      style={{ maxWidth: '100%' }}
+      style={{ maxWidth: '100%', minWidth: '20px', height: '16px' }}
     >
-      •
     </div>
   );
 }
@@ -288,7 +287,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
     const remainingCount = allItems.length - visibleItems.length;
 
     return (
-      <div className="flex flex-wrap gap-1 overflow-hidden min-h-[2rem] w-full">
+      <div className="flex flex-wrap gap-1 overflow-hidden min-h-[1rem] w-full">
         {visibleItems.map((item, index) => {
           if ('priority' in item) {
             // Task
