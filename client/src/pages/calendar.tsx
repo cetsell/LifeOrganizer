@@ -98,10 +98,11 @@ interface TimeSlotProps {
   events: CalendarEvent[];
   isCurrentHour?: boolean;
   isExpanded?: boolean;
+  isDayExpanded?: boolean;
   onTimeSlotClick?: (date: string, hour: number) => void;
 }
 
-function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded, onTimeSlotClick }: TimeSlotProps) {
+function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded, isDayExpanded, onTimeSlotClick }: TimeSlotProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [noteContent, setNoteContent] = useState("");
@@ -138,8 +139,27 @@ function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded,
 
   // Handle dropped tasks
   const scheduleTaskMutation = useMutation({
-    mutationFn: async ({ id, ...updateData }: { id: string } & any) => {
-      const response = await apiRequest("PUT", `/api/tasks/${id}`, updateData);
+    mutationFn: async ({ id, title, description, priority, status, completed, scheduledDate, scheduledHour }: { 
+      id: string; 
+      title: string; 
+      description?: string | null; 
+      priority: string; 
+      status: string; 
+      completed: boolean; 
+      scheduledDate: string; 
+      scheduledHour: number; 
+    }) => {
+      // Ensure clean, serializable data only
+      const cleanData = {
+        title: String(title),
+        description: description || null,
+        priority: String(priority),
+        status: String(status),
+        completed: Boolean(completed),
+        scheduledDate: String(scheduledDate),
+        scheduledHour: Number(scheduledHour)
+      };
+      const response = await apiRequest("PUT", `/api/tasks/${id}`, cleanData);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to update task");
@@ -181,9 +201,9 @@ function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded,
       const existingNote = notes.find(note => note.date === date && note.hour === hour);
       
       if (existingNote) {
-        // Update existing note
+        // Update existing note with clean data
         const response = await apiRequest("PUT", `/api/time-block-notes/${existingNote.id}`, {
-          content
+          content: String(content)
         });
         if (!response.ok) {
           const error = await response.json();
@@ -191,11 +211,11 @@ function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded,
         }
         return response.json();
       } else {
-        // Create new note
+        // Create new note with clean data
         const response = await apiRequest("POST", "/api/time-block-notes", {
-          date,
-          hour,
-          content
+          date: String(date),
+          hour: Number(hour),
+          content: String(content)
         });
         if (!response.ok) {
           const error = await response.json();
@@ -213,8 +233,16 @@ function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded,
   });
   
   const createEventMutation = useMutation({
-    mutationFn: async (eventData: any) => {
-      const response = await apiRequest("POST", "/api/calendar-events", eventData);
+    mutationFn: async (eventData: z.infer<typeof insertCalendarEventSchema>) => {
+      // Ensure we only send clean, serializable data
+      const cleanData = {
+        title: eventData.title,
+        description: eventData.description || null,
+        date: eventData.date,
+        hour: eventData.hour,
+        duration: eventData.duration || 1
+      };
+      const response = await apiRequest("POST", "/api/calendar-events", cleanData);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.error || "Failed to create event");
@@ -340,7 +368,14 @@ function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded,
       onClick={handleTimeSlotClick}
     >
       {isExpanded ? (
-        <div className="p-3 h-full flex flex-col" data-testid={`expanded-notes-${date}-${hour}`}>
+        <div 
+          className={`p-3 h-full flex flex-col ${
+            isDayExpanded 
+              ? "absolute left-0 right-0 top-0 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg" 
+              : ""
+          }`}
+          data-testid={`expanded-notes-${date}-${hour}`}
+        >
           {/* Time Header */}
           <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
@@ -361,6 +396,36 @@ function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded,
             </Button>
           </div>
           
+          {/* Show existing tasks, notes, events in expanded view */}
+          {(tasks.length > 0 || notes.length > 0 || events.length > 0) && (
+            <div className="mb-3 space-y-1">
+              {tasks.map(task => (
+                <div 
+                  key={`task-${task.id}`}
+                  className={`px-2 py-1 text-xs rounded ${getPriorityColor(task.priority)}`}
+                >
+                  {task.title}
+                </div>
+              ))}
+              {events.map(event => (
+                <div 
+                  key={`event-${event.id}`}
+                  className="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                >
+                  {event.title} {(event.duration || 1) > 1 && `(${event.duration || 1}h)`}
+                </div>
+              ))}
+              {notes.filter(note => note.id !== notes.find(n => n.date === date && n.hour === hour)?.id).map(note => (
+                <div 
+                  key={`note-${note.id}`}
+                  className="px-2 py-1 text-xs rounded bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
+                >
+                  {note.content}
+                </div>
+              ))}
+            </div>
+          )}
+          
           {/* Natural Text Area */}
           <textarea
             value={noteContent}
@@ -374,8 +439,18 @@ function TimeSlot({ date, hour, tasks, notes, events, isCurrentHour, isExpanded,
           />
         </div>
       ) : (
-        <div className="p-1 h-full">
+        <div className="p-1 h-full relative">
           {renderCollapsedContent()}
+          {/* Render spanning events inline within time slot */}
+          {events.filter(event => event.hour === hour && (event.duration || 1) > 1).map(event => (
+            <div 
+              key={`inline-event-${event.id}`}
+              className="absolute top-0 left-0 right-0 bottom-0 mx-1 px-2 py-1 rounded text-xs bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700 z-10 flex flex-col justify-start pointer-events-none"
+            >
+              <div className="font-medium truncate">{event.title}</div>
+              <div className="text-xs opacity-75">{event.duration || 1}h</div>
+            </div>
+          ))}
         </div>
       )}
       
@@ -621,8 +696,8 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                   }}
                   data-testid={`day-column-${dateStr}`}
                 >
-                  {/* Render spanning events */}
-                  {dayEvents.map(event => (
+                  {/* Render spanning events - but only for display, actual interaction handled in TimeSlot */}
+                  {dayEvents.filter(event => (event.duration || 1) > 1).map(event => (
                     <SpanningEvent key={event.id} event={event} />
                   ))}
                   
@@ -648,6 +723,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                           events={events.filter(event => event.date === dateStr && event.hour === hour)}
                           isCurrentHour={isCurrentHour}
                           isExpanded={expandedTimeSlot?.date === dateStr && expandedTimeSlot?.hour === hour}
+                          isDayExpanded={expandedTimeSlot?.date === dateStr}
                           onTimeSlotClick={onTimeBlockClick}
                         />
                       </div>

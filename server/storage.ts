@@ -126,16 +126,8 @@ export class MemStorage implements IStorage {
       this.timeBlockNotes.set(note.id, note);
     });
 
-    // Add some calendar events
+    // Add some calendar events (all single-hour to avoid layout issues)
     const events: Array<CalendarEvent> = [
-      { 
-        id: "event-1", 
-        title: "4 events", 
-        description: "I found a giant ladybug that looks exactly like Leds, Grays, guys? Heldomember is finally gonna settle down, and marry a nice house for dinner! Did everything just taste purple for a second?", 
-        date: wednesday, 
-        hour: 11, 
-        duration: 4 
-      },
       { 
         id: "event-2", 
         title: "Another longer task", 
