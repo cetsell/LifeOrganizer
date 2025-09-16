@@ -56,22 +56,26 @@ interface TaskBlockProps {
 }
 
 function TaskBlock({ task }: TaskBlockProps) {
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700";
-      case "medium":
-        return "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-700";
-      case "low":
+  const getTaskColor = (color: string | null) => {
+    switch (color) {
+      case "blue":
+        return "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700";
+      case "green":
         return "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-green-200 dark:border-green-700";
+      case "purple":
+        return "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200 border-purple-200 dark:border-purple-700";
+      case "orange":
+        return "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200 border-orange-200 dark:border-orange-700";
+      case "red":
+        return "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200 border-red-200 dark:border-red-700";
       default:
-        return "bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200 border-gray-200 dark:border-gray-700";
+        return "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-blue-200 dark:border-blue-700";
     }
   };
 
   return (
     <div 
-      className={`px-2 py-1 mb-1 rounded text-xs border ${getPriorityColor(task.priority)}`}
+      className={`px-2 py-1 mb-1 rounded text-xs border ${getTaskColor(task.color)}`}
       data-testid={`task-block-${task.id}`}
     >
       <div className="font-medium truncate">{task.title}</div>
@@ -295,7 +299,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
             return (
               <div 
                 key={`task-${task.id}`}
-                className={`inline-flex px-1.5 pt-0.5 pb-0 text-xs rounded truncate ${getPriorityColor(task.priority)}`}
+                className={`inline-flex px-1.5 pt-0.5 pb-0 text-xs rounded truncate ${getTaskColor(task.color)}`}
                 style={{ maxWidth: '100%' }}
               >
                 {task.title}
@@ -340,16 +344,20 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
     );
   };
 
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200";
-      case "medium":
-        return "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200";
-      case "low":
+  const getTaskColor = (color: string | null) => {
+    switch (color) {
+      case "blue":
+        return "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200";
+      case "green":
         return "bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200";
+      case "purple":
+        return "bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200";
+      case "orange":
+        return "bg-orange-100 dark:bg-orange-900 text-orange-800 dark:text-orange-200";
+      case "red":
+        return "bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200";
       default:
-        return "bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200";
+        return "bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200";
     }
   };
 
@@ -401,7 +409,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
               {tasks.map(task => (
                 <div 
                   key={`task-${task.id}`}
-                  className={`px-2 py-1 text-xs rounded ${getPriorityColor(task.priority)}`}
+                  className={`px-2 py-1 text-xs rounded ${getTaskColor(task.color)}`}
                 >
                   {task.title}
                 </div>
@@ -805,9 +813,10 @@ interface DraggableTaskProps {
   task: Task;
   bgColor: string;
   borderColor: string;
+  onTaskClick?: (task: Task) => void;
 }
 
-function DraggableTask({ task, bgColor, borderColor }: DraggableTaskProps) {
+function DraggableTask({ task, bgColor, borderColor, onTaskClick }: DraggableTaskProps) {
   const [{ isDragging }, drag] = useDrag({
     type: ItemTypes.TASK,
     item: { id: task.id, task },
@@ -815,30 +824,43 @@ function DraggableTask({ task, bgColor, borderColor }: DraggableTaskProps) {
       isDragging: monitor.isDragging(),
     }),
   });
+  
+  const handleClick = (e: React.MouseEvent) => {
+    // Only handle click if not dragging and onTaskClick is provided
+    if (!isDragging && onTaskClick) {
+      e.stopPropagation();
+      onTaskClick(task);
+    }
+  };
 
-  const getPriorityDotColor = (priority: string) => {
-    switch (priority) {
-      case "high":
-        return "bg-red-500";
-      case "medium":
-        return "bg-orange-500";
-      case "low":
+  const getTaskDotColor = (color: string | null) => {
+    switch (color) {
+      case "blue":
+        return "bg-blue-500";
+      case "green":
         return "bg-green-500";
+      case "purple":
+        return "bg-purple-500";
+      case "orange":
+        return "bg-orange-500";
+      case "red":
+        return "bg-red-500";
       default:
-        return "bg-gray-500";
+        return "bg-blue-500";
     }
   };
 
   return (
     <div
       ref={drag}
-      className={`p-2 rounded cursor-move transition-opacity hover:bg-gray-50 dark:hover:bg-gray-800 ${
+      className={`p-2 rounded cursor-pointer transition-opacity hover:bg-gray-50 dark:hover:bg-gray-800 ${
         isDragging ? "opacity-50" : ""
       }`}
+      onClick={handleClick}
       data-testid={`draggable-task-${task.id}`}
     >
       <div className="flex items-center gap-2">
-        <div className={`w-2 h-2 rounded-full ${getPriorityDotColor(task.priority)}`} />
+        <div className={`w-2 h-2 rounded-full ${getTaskDotColor(task.color)}`} />
         <span className="text-sm text-gray-900 dark:text-gray-100 flex-1">{task.title}</span>
         <Move className="h-3 w-3 text-gray-400" />
       </div>
@@ -861,11 +883,33 @@ interface TaskSidebarSectionProps {
 }
 
 function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }: TaskSidebarSectionProps) {
-  const [isExpanded, setIsExpanded] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
   const { toast } = useToast();
   
   const queryClient = useQueryClient();
+  
+  // Set up drop target for tasks from other lists
+  const [{ isOver }, drop] = useDrop({
+    accept: ItemTypes.TASK,
+    drop: (item: { id: string, task: Task }) => {
+      // Only update if the task is moving to a different status
+      if (item.task.status !== status) {
+        updateTaskMutation.mutate({ 
+          id: item.id, 
+          taskData: { 
+            ...item.task,
+            status: status,
+            scheduledDate: null, // Unschedule when moving to sidebar
+            scheduledHour: null
+          }
+        });
+      }
+    },
+    collect: (monitor) => ({
+      isOver: monitor.isOver(),
+    }),
+  });
 
   // Form for creating new tasks
   const addTaskForm = useForm<z.infer<typeof insertTaskSchema>>({
@@ -875,12 +919,28 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
       description: "",
       priority: "medium",
       status: status,
+      color: "blue",
       scheduledDate: null,
       scheduledHour: null,
       completed: false,
     },
   });
 
+  // Form for editing existing tasks
+  const editTaskForm = useForm<z.infer<typeof insertTaskSchema>>({  
+    resolver: zodResolver(insertTaskSchema),
+    defaultValues: {
+      title: "",
+      description: "",
+      priority: "medium",
+      status: status,
+      color: "blue",
+      scheduledDate: null,
+      scheduledHour: null,
+      completed: false,
+    },
+  });
+  
   // Create task mutation
   const sidebarCreateTaskMutation = useMutation({
     mutationFn: async (taskData: any) => {
@@ -899,6 +959,7 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
         description: "",
         priority: "medium",
         status: status,
+        color: "blue",
         scheduledDate: null,
         scheduledHour: null,
         completed: false,
@@ -916,88 +977,104 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
       });
     }
   });
+  
+  // Update task mutation
+  const updateTaskMutation = useMutation({
+    mutationFn: async ({ id, taskData }: { id: string; taskData: any }) => {
+      const response = await apiRequest("PATCH", `/api/tasks/${id}`, taskData);
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to update task");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/tasks"] });
+      setEditingTask(null);
+      toast({
+        title: "Success",
+        description: "Task updated successfully",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
 
   const handleAddTask = (values: z.infer<typeof insertTaskSchema>) => {
     sidebarCreateTaskMutation.mutate(values);
   };
+  
+  const handleEditTask = (values: z.infer<typeof insertTaskSchema>) => {
+    if (editingTask) {
+      updateTaskMutation.mutate({ id: editingTask.id, taskData: values });
+    }
+  };
+  
+  const handleTaskClick = (task: Task) => {
+    setEditingTask(task);
+    editTaskForm.reset({
+      title: task.title,
+      description: task.description || "",
+      priority: task.priority as "low" | "medium" | "high",
+      status: task.status as "todo" | "upcoming" | "later",
+      color: task.color || "blue",
+      scheduledDate: task.scheduledDate,
+      scheduledHour: task.scheduledHour,
+      completed: !!task.completed,
+    });
+  };
 
   return (
-    <div className="mb-6" data-testid={`task-section-${status}`}>
-      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
-        <CollapsibleTrigger asChild>
-          <div className="p-2 hover:bg-muted/50 dark:hover:bg-muted/30 rounded cursor-pointer" data-testid={`section-header-${status}`}>
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2">
-                <h3 className="font-medium text-gray-900 dark:text-gray-100">{title}</h3>
-              </div>
-              {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </div>
-            
-            {/* Preview when collapsed - show 1-3 lines or 2 lines + collapsed pills */}
-            {!isExpanded && tasks.length > 0 && (
-              <div className="space-y-1" data-testid={`preview-${status}`}>
-                {tasks.length <= 3 ? (
-                  // Show all tasks when 3 or fewer
-                  tasks.map(task => (
-                    <div 
-                      key={task.id}
-                      className="text-xs text-gray-600 dark:text-gray-400 truncate px-2"
-                      title={task.title}
-                    >
-                      {task.title}
-                    </div>
-                  ))
-                ) : (
-                  // Show first 2 tasks + collapsed pills row when more than 3
-                  <>
-                    {tasks.slice(0, 2).map(task => (
-                      <div 
-                        key={task.id}
-                        className="text-xs text-gray-600 dark:text-gray-400 truncate px-2"
-                        title={task.title}
-                      >
-                        {task.title}
-                      </div>
-                    ))}
-                    <div className="flex flex-wrap gap-1 px-2">
-                      {tasks.slice(2).map(task => (
-                        <div 
-                          key={task.id}
-                          className="px-1.5 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-700 text-gray-600 dark:text-gray-400 truncate max-w-16"
-                          title={task.title}
-                          data-testid={`preview-pill-${task.id}`}
-                        >
-                          {task.title}
-                        </div>
-                      ))}
-                      <div className="px-1.5 py-0.5 text-xs rounded bg-gray-200 dark:bg-gray-600 text-gray-500 dark:text-gray-400 font-medium">
-                        +{tasks.length - 2}
-                      </div>
-                    </div>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </CollapsibleTrigger>
+    <div 
+      ref={drop}
+      className={`mb-6 p-3 rounded border-2 border-dashed transition-colors ${
+        isOver 
+          ? "border-blue-400 bg-blue-50 dark:bg-blue-950/30" 
+          : "border-transparent"
+      }`} 
+      data-testid={`task-section-${status}`}
+    >
+      {/* Header with inline Add Task button */}
+      <div className="flex items-center justify-between mb-3" data-testid={`section-header-${status}`}>
+        <div className="flex items-center gap-2">
+          {icon}
+          <h3 className="font-medium text-gray-900 dark:text-gray-100">{title}</h3>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => setShowAddForm(true)}
+          data-testid={`button-add-${status}-task`}
+          className="h-7 text-xs"
+        >
+          <Plus className="h-3 w-3 mr-1" />
+          Add Task
+        </Button>
+      </div>
+      
+      {/* Task List */}
+      <div className="space-y-2">
+        {/* Task list - always visible, no collapsing */}
+        {tasks.map(task => (
+          <DraggableTask 
+            key={task.id}
+            task={task}
+            bgColor={bgColor}
+            borderColor={borderColor}
+            onTaskClick={handleTaskClick}
+          />
+        ))}
         
-        <CollapsibleContent className="mt-2">
-          <div className="space-y-2">
-            {/* Full task list when expanded - all tasks visible for full functionality */}
-            {tasks.map(task => (
-              <DraggableTask 
-                key={task.id}
-                task={task}
-                bgColor={bgColor}
-                borderColor={borderColor}
-              />
-            ))}
-            
-            {tasks.length === 0 && !showAddForm && (
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground italic p-2">
-                No {title.toLowerCase()} tasks
-              </div>
-            )}
+        {tasks.length === 0 && !showAddForm && (
+          <div className="text-xs text-muted-foreground dark:text-muted-foreground italic p-2">
+            No {title.toLowerCase()} tasks
+          </div>
+        )}
             
             {/* Add Task Button */}
             <div className="pt-2">
@@ -1042,28 +1119,54 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
                           </FormItem>
                         )}
                       />
-                      <FormField
-                        control={addTaskForm.control}
-                        name="priority"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Priority</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-task-priority">
-                                  <SelectValue placeholder="Select priority" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="low">Low Priority</SelectItem>
-                                <SelectItem value="medium">Medium Priority</SelectItem>
-                                <SelectItem value="high">High Priority</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
+                      <div className="grid grid-cols-2 gap-3">
+                        <FormField
+                          control={addTaskForm.control}
+                          name="priority"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Priority</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-task-priority">
+                                    <SelectValue placeholder="Select priority" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="low">Low Priority</SelectItem>
+                                  <SelectItem value="medium">Medium Priority</SelectItem>
+                                  <SelectItem value="high">High Priority</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={addTaskForm.control}
+                          name="color"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Color</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value || "blue"}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-task-color">
+                                    <SelectValue placeholder="Select color" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="blue">Blue</SelectItem>
+                                  <SelectItem value="green">Green</SelectItem>
+                                  <SelectItem value="purple">Purple</SelectItem>
+                                  <SelectItem value="orange">Orange</SelectItem>
+                                  <SelectItem value="red">Red</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                       <div className="flex gap-2 pt-2">
                         <Button
                           size="sm"
@@ -1089,9 +1192,122 @@ function TaskSidebarSection({ title, status, tasks, icon, bgColor, borderColor }
                 </div>
               )}
             </div>
+      </div>
+      
+      {/* Edit Task Form */}
+      {editingTask && (
+        <div className="space-y-3 p-3 border border-border dark:border-border rounded bg-blue-50 dark:bg-blue-950/30 mb-3">
+          <div className="flex items-center justify-between">
+            <h4 className="font-medium text-gray-900 dark:text-gray-100">Edit Task</h4>
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setEditingTask(null)}
+              data-testid="button-close-edit"
+            >
+              <X className="h-3 w-3" />
+            </Button>
           </div>
-        </CollapsibleContent>
-      </Collapsible>
+          <Form {...editTaskForm}>
+            <form onSubmit={editTaskForm.handleSubmit(handleEditTask)} className="space-y-3">
+              <FormField
+                control={editTaskForm.control}
+                name="title"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Task Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Task title..." {...field} data-testid="input-edit-task-title" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={editTaskForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Description (optional)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Description (optional)..." rows={2} {...field} value={field.value || ""} data-testid="input-edit-task-description" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={editTaskForm.control}
+                  name="priority"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Priority</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-task-priority">
+                            <SelectValue placeholder="Select priority" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="low">Low</SelectItem>
+                          <SelectItem value="medium">Medium</SelectItem>
+                          <SelectItem value="high">High</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={editTaskForm.control}
+                  name="color"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Color</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value || "blue"}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-task-color">
+                            <SelectValue placeholder="Select color" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="blue">Blue</SelectItem>
+                          <SelectItem value="green">Green</SelectItem>
+                          <SelectItem value="purple">Purple</SelectItem>
+                          <SelectItem value="orange">Orange</SelectItem>
+                          <SelectItem value="red">Red</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button
+                  size="sm"
+                  type="submit"
+                  disabled={updateTaskMutation.isPending || !editTaskForm.formState.isValid}
+                  data-testid="button-update-task"
+                >
+                  <Save className="h-3 w-3 mr-1" />
+                  Update Task
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setEditingTask(null)}
+                  data-testid="button-cancel-edit"
+                >
+                  <X className="h-3 w-3 mr-1" />
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
+      )}
     </div>
   );
 }
