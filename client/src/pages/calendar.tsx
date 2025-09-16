@@ -9,15 +9,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Clock, X, List, Calendar as CalendarIcon, Move, Save, CheckSquare } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronUp, Plus, Clock, X, List, Calendar as CalendarIcon, Move, Save, CheckSquare, PanelRightOpen, PanelRightClose } from "lucide-react";
 import { Task, CalendarEvent, TimeBlockNote, insertCalendarEventSchema, insertTaskSchema } from "@shared/schema";
 import { apiRequest, queryClient as globalQueryClient } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
 // Utility functions for date handling
 const getWeekStart = (date: Date) => startOfWeek(date, { weekStartsOn: 0 }); // Sunday start
@@ -1374,6 +1375,37 @@ function TaskSidebar() {
 export default function Calendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [expandedTimeSlot, setExpandedTimeSlot] = useState<{ date: string; hour: number } | null>(null);
+  
+  // Sidebar toggle state with localStorage persistence and responsive behavior
+  const isMobile = useIsMobile();
+  const [isSidebarOpen, setIsSidebarOpen] = useState(() => {
+    // Default to closed on mobile, open on desktop
+    const defaultValue = !isMobile;
+    try {
+      const stored = localStorage.getItem('calendar.sidebar');
+      return stored !== null ? JSON.parse(stored) : defaultValue;
+    } catch {
+      return defaultValue;
+    }
+  });
+
+  // Persist sidebar state to localStorage and handle mobile responsiveness
+  useEffect(() => {
+    // On mobile, default to closed unless user explicitly opened it
+    if (isMobile && !localStorage.getItem('calendar.sidebar')) {
+      setIsSidebarOpen(false);
+    }
+    
+    try {
+      localStorage.setItem('calendar.sidebar', JSON.stringify(isSidebarOpen));
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [isSidebarOpen, isMobile]);
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen(prev => !prev);
+  };
 
   const currentWeekStart = getWeekStart(currentDate);
   const previousWeekStart = addWeeks(currentWeekStart, -1);
@@ -1404,63 +1436,36 @@ export default function Calendar() {
     setExpandedTimeSlot({ date: dateStr, hour: 12 }); // Default to noon
   };
 
+  // Sidebar content component for reuse
+  const sidebarContent = (
+    <div className="p-4 h-full overflow-y-auto">
+      {/* Date Display */}
+      <div className="mb-6">
+        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100" data-testid="current-date">
+          {format(currentDate, "MMMM d, yyyy")}
+        </h2>
+      </div>
+      
+      {/* Task Sidebar Content */}
+      <TaskSidebarContent />
+    </div>
+  );
+
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex" data-testid="calendar-page">
-        {/* Main Calendar Area */}
-        <div className="flex-1 p-4 pr-0">
-          <div className="w-full space-y-4">
-            {/* Previous Week */}
-            <WeekView 
-              weekStart={previousWeekStart}
-              currentDate={currentDate}
-              isCurrentWeek={false}
-              expandedTimeSlot={null}
-              onDayClick={handleDayClick}
-            />
-            
-            {/* Current Week */}
-            <WeekView 
-              weekStart={currentWeekStart}
-              currentDate={currentDate}
-              isCurrentWeek={true}
-              onTimeBlockClick={handleTimeBlockClick}
-              expandedTimeSlot={expandedTimeSlot}
-              setExpandedTimeSlot={setExpandedTimeSlot}
-            />
-            
-            {/* Next Week */}
-            <WeekView 
-              weekStart={nextWeekStart}
-              currentDate={currentDate}
-              isCurrentWeek={false}
-              expandedTimeSlot={null}
-              onDayClick={handleDayClick}
-            />
-            
-          </div>
-        </div>
-        
-        {/* Fixed Right Sidebar */}
-        <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 h-screen overflow-y-auto" data-testid="fixed-sidebar">
-          <div className="p-4">
-            {/* Date Display */}
-            <div className="mb-6">
-              <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100" data-testid="current-date">
-                {format(currentDate, "MMMM d, yyyy")}
-              </h2>
-            </div>
-            
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col" data-testid="calendar-page">
+        {/* Header with Navigation and Toggle */}
+        <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4">
+          <div className="flex items-center justify-between">
             {/* Week Navigation */}
-            <div className="flex items-center gap-2 mb-6">
+            <div className="flex items-center gap-2">
               <Button
                 variant="outline"
                 size="sm"
                 onClick={() => navigateWeek("prev")}
                 data-testid="button-prev-week"
-                className="flex-1"
               >
-                <ChevronLeft className="h-4 w-4" />
+                <ChevronLeft className="h-4 w-4 mr-1" />
                 Previous
               </Button>
               <Button 
@@ -1476,17 +1481,90 @@ export default function Calendar() {
                 size="sm"
                 onClick={() => navigateWeek("next")}
                 data-testid="button-next-week"
-                className="flex-1"
               >
                 Next
-                <ChevronRight className="h-4 w-4" />
+                <ChevronRight className="h-4 w-4 ml-1" />
               </Button>
             </div>
-            
-            {/* Task Sidebar Content */}
-            <TaskSidebarContent />
+
+            {/* Sidebar Toggle Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={toggleSidebar}
+              data-testid="button-toggle-sidebar"
+              aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+              aria-expanded={isSidebarOpen}
+            >
+              {isSidebarOpen ? (
+                <PanelRightClose className="h-4 w-4" />
+              ) : (
+                <PanelRightOpen className="h-4 w-4" />
+              )}
+              <span className="sr-only">
+                {isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+              </span>
+            </Button>
           </div>
+        </header>
+
+        {/* Main Content Area */}
+        <div className="flex flex-1 min-h-0">
+          {/* Main Calendar Area */}
+          <main className={`${isSidebarOpen && !isMobile ? 'flex-1 min-w-0' : 'w-full'} p-4 transition-all duration-300 ease-in-out`}>
+            <div className="w-full space-y-4">
+              {/* Previous Week */}
+              <WeekView 
+                weekStart={previousWeekStart}
+                currentDate={currentDate}
+                isCurrentWeek={false}
+                expandedTimeSlot={null}
+                onDayClick={handleDayClick}
+              />
+              
+              {/* Current Week */}
+              <WeekView 
+                weekStart={currentWeekStart}
+                currentDate={currentDate}
+                isCurrentWeek={true}
+                onTimeBlockClick={handleTimeBlockClick}
+                expandedTimeSlot={expandedTimeSlot}
+                setExpandedTimeSlot={setExpandedTimeSlot}
+              />
+              
+              {/* Next Week */}
+              <WeekView 
+                weekStart={nextWeekStart}
+                currentDate={currentDate}
+                isCurrentWeek={false}
+                expandedTimeSlot={null}
+                onDayClick={handleDayClick}
+              />
+            </div>
+          </main>
+          
+          {/* Desktop Sidebar - Conditional Rendering */}
+          {!isMobile && isSidebarOpen && (
+            <aside 
+              className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out" 
+              data-testid="desktop-sidebar"
+            >
+              {sidebarContent}
+            </aside>
+          )}
         </div>
+
+        {/* Mobile Sheet Sidebar */}
+        {isMobile && (
+          <Sheet open={isSidebarOpen} onOpenChange={setIsSidebarOpen}>
+            <SheetContent side="right" className="w-80 p-0" data-testid="mobile-sidebar">
+              <SheetHeader className="p-4 pb-0">
+                <SheetTitle>Calendar Sidebar</SheetTitle>
+              </SheetHeader>
+              {sidebarContent}
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
     </DndProvider>
   );
