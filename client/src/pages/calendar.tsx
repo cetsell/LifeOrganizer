@@ -287,7 +287,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
     const remainingCount = allItems.length - visibleItems.length;
 
     return (
-      <div className="flex flex-col gap-0.5 overflow-hidden min-h-[2rem] w-full">
+      <div className="flex flex-wrap gap-1 overflow-hidden min-h-[2rem] w-full">
         {visibleItems.map((item, index) => {
           if ('priority' in item) {
             // Task
@@ -295,7 +295,8 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
             return (
               <div 
                 key={`task-${task.id}`}
-                className={`px-1.5 py-0.5 text-xs rounded truncate max-w-full ${getPriorityColor(task.priority)}`}
+                className={`inline-flex px-1.5 py-0.5 text-xs rounded truncate ${getPriorityColor(task.priority)}`}
+                style={{ maxWidth: '100%' }}
               >
                 {task.title}
               </div>
@@ -306,7 +307,8 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
             return (
               <div 
                 key={`note-${note.id}`}
-                className="px-1.5 py-0.5 text-xs rounded truncate max-w-full bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
+                className="inline-flex px-1.5 py-0.5 text-xs rounded truncate bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
+                style={{ maxWidth: '100%' }}
               >
                 {note.content}
               </div>
@@ -317,7 +319,8 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
             return (
               <div 
                 key={`event-${event.id}`}
-                className="px-1.5 py-0.5 text-xs rounded truncate max-w-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                className="inline-flex px-1.5 py-0.5 text-xs rounded truncate bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                style={{ maxWidth: '100%' }}
               >
                 {event.title}
               </div>
@@ -325,7 +328,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
           }
         })}
         {remainingCount > 0 && (
-          <div className="px-1.5 py-0.5 text-xs rounded max-w-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+          <div className="inline-flex px-1.5 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
             +{remainingCount}
           </div>
         )}
@@ -349,7 +352,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
   return (
     <div 
       ref={drop}
-      className={`w-full relative transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+      className={`w-full relative overflow-hidden transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
         isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
       } ${
         isOver ? "bg-primary/10 dark:bg-primary/5" : ""
@@ -361,7 +364,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
     >
       {isExpanded ? (
         <div 
-          className={`p-3 h-full flex flex-col ${
+          className={`p-3 h-full flex flex-col overflow-hidden ${
             isDayExpanded 
               ? "absolute left-0 right-0 top-0 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg" 
               : ""
@@ -439,12 +442,14 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
           />
         </div>
       ) : (
-        <div className="p-1 h-full relative">
-          {renderCollapsedContent()}
-          {/* Render continuation indicators for multi-hour events */}
-          {continuationEvents.map(event => (
-            <EventContinuation key={`continuation-${event.id}`} event={event} />
-          ))}
+        <div className="p-1 h-full relative overflow-hidden">
+          <div className="w-full h-full overflow-hidden">
+            {renderCollapsedContent()}
+            {/* Render continuation indicators for multi-hour events */}
+            {continuationEvents.map(event => (
+              <EventContinuation key={`continuation-${event.id}`} event={event} />
+            ))}
+          </div>
         </div>
       )}
       
@@ -697,7 +702,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
               return (
                 <div 
                   key={`${dateStr}`}
-                  className="relative border-r border-gray-100 dark:border-gray-800 last:border-r-0"
+                  className="relative border-r border-gray-100 dark:border-gray-800 last:border-r-0 overflow-hidden"
                   style={{
                     display: 'grid',
                     gridTemplateRows: 'repeat(24, minmax(3rem, auto))',
