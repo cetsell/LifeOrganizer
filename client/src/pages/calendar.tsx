@@ -42,11 +42,13 @@ interface EventContinuationProps {
 
 function EventContinuation({ event }: EventContinuationProps) {
   return (
-    <div className="flex items-center justify-start pl-1 py-0.5">
+    <div className="w-full py-0.5">
       <div 
-        className="w-2 h-2 rounded-full bg-blue-500 dark:bg-blue-400"
+        className="px-1.5 py-0.5 text-xs rounded truncate max-w-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border border-blue-200 dark:border-blue-700"
         data-testid={`event-continuation-${event.id}`}
-      />
+      >
+        •
+      </div>
     </div>
   );
 }
@@ -285,7 +287,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
     const remainingCount = allItems.length - visibleItems.length;
 
     return (
-      <div className="flex items-center gap-1 overflow-hidden whitespace-nowrap text-ellipsis min-h-[2rem]">
+      <div className="flex flex-col gap-0.5 overflow-hidden min-h-[2rem] w-full">
         {visibleItems.map((item, index) => {
           if ('priority' in item) {
             // Task
@@ -293,7 +295,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
             return (
               <div 
                 key={`task-${task.id}`}
-                className={`px-1.5 py-0.5 text-xs rounded truncate ${getPriorityColor(task.priority)}`}
+                className={`px-1.5 py-0.5 text-xs rounded truncate max-w-full ${getPriorityColor(task.priority)}`}
               >
                 {task.title}
               </div>
@@ -304,7 +306,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
             return (
               <div 
                 key={`note-${note.id}`}
-                className="px-1.5 py-0.5 text-xs rounded truncate bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
+                className="px-1.5 py-0.5 text-xs rounded truncate max-w-full bg-purple-100 dark:bg-purple-900 text-purple-800 dark:text-purple-200"
               >
                 {note.content}
               </div>
@@ -315,7 +317,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
             return (
               <div 
                 key={`event-${event.id}`}
-                className="px-1.5 py-0.5 text-xs rounded truncate bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
+                className="px-1.5 py-0.5 text-xs rounded truncate max-w-full bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
               >
                 {event.title}
               </div>
@@ -323,7 +325,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
           }
         })}
         {remainingCount > 0 && (
-          <div className="px-1.5 py-0.5 text-xs rounded bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
+          <div className="px-1.5 py-0.5 text-xs rounded max-w-full bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400">
             +{remainingCount}
           </div>
         )}
@@ -387,7 +389,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
           </div>
           
           {/* Show existing tasks, notes, events in expanded view */}
-          {(tasks.length > 0 || notes.length > 0 || events.length > 0) && (
+          {(tasks.length > 0 || notes.length > 0 || events.length > 0 || continuationEvents.length > 0) && (
             <div className="mb-3 space-y-1">
               {tasks.map(task => (
                 <div 
@@ -403,6 +405,14 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
                   className="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200"
                 >
                   {event.title} {(event.duration || 1) > 1 && `(${event.duration || 1}h)`}
+                </div>
+              ))}
+              {continuationEvents.map(event => (
+                <div 
+                  key={`continuation-expanded-${event.id}`}
+                  className="px-2 py-1 text-xs rounded bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-200 border-l-2 border-blue-500"
+                >
+                  {event.title} (continues from {event.hour}:00)
                 </div>
               ))}
               {notes.filter(note => note.id !== notes.find(n => n.date === date && n.hour === hour)?.id).map(note => (
