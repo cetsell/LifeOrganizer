@@ -20,7 +20,7 @@ import { z } from "zod";
 import { useToast } from "@/hooks/use-toast";
 
 // Utility functions for date handling
-const getWeekStart = (date: Date) => startOfWeek(date, { weekStartsOn: 1 }); // Monday start
+const getWeekStart = (date: Date) => startOfWeek(date, { weekStartsOn: 0 }); // Sunday start
 const formatDate = (date: Date) => format(date, "yyyy-MM-dd");
 const formatTime = (hour: number) => {
   const date = new Date().setHours(hour, 0, 0, 0);
@@ -28,7 +28,7 @@ const formatTime = (hour: number) => {
 };
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
-const DAYS_OF_WEEK = ["MON", "TUES", "WEDS", "THURS", "FRI", "SAT", "SUN"];
+const DAYS_OF_WEEK = ["SUN", "MON", "TUES", "WEDS", "THURS", "FRI", "SAT"];
 
 // Drag and drop item types
 const ItemTypes = {
@@ -476,10 +476,30 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
       return formatDate(date) === expandedTimeSlot.date;
     }) : -1;
   
-  // Generate dynamic grid template columns
+  // Determine which days to hide based on expansion
+  const getHiddenDays = () => {
+    if (expandedDayIndex === -1) return new Set(); // No expansion, show all days
+    
+    if (expandedDayIndex >= 1 && expandedDayIndex <= 5) {
+      // Weekday expansion (Mon-Fri): Hide both weekend days
+      return new Set([0, 6]); // Hide SUN and SAT
+    } else if (expandedDayIndex === 0) {
+      // Sunday expansion: Hide Saturday
+      return new Set([6]); // Hide SAT
+    } else if (expandedDayIndex === 6) {
+      // Saturday expansion: Hide Sunday
+      return new Set([0]); // Hide SUN
+    }
+    return new Set();
+  };
+  
+  const hiddenDays = getHiddenDays();
+  const visibleDayIndices = DAYS_OF_WEEK.map((_, index) => index).filter(index => !hiddenDays.has(index));
+  
+  // Generate dynamic grid template columns for visible days only
   const generateGridColumns = () => {
     const timeColumn = '64px';
-    const dayColumns = DAYS_OF_WEEK.map((_, index) => {
+    const dayColumns = visibleDayIndices.map(index => {
       if (index === expandedDayIndex) {
         return 'minmax(0, 2.2fr)';
       }
@@ -533,7 +553,8 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             <div className="p-3 text-sm font-medium text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               Time
             </div>
-            {DAYS_OF_WEEK.map((day, index) => {
+            {visibleDayIndices.map((index) => {
+              const day = DAYS_OF_WEEK[index];
               const date = addDays(weekStart, index);
               const dateStr = formatDate(date);
               const isToday = isSameDay(date, currentDate);
@@ -582,7 +603,8 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             </div>
             
             {/* Day columns with CSS Grid */}
-            {DAYS_OF_WEEK.map((day, dayIndex) => {
+            {visibleDayIndices.map((dayIndex) => {
+              const day = DAYS_OF_WEEK[dayIndex];
               const date = addDays(weekStart, dayIndex);
               const dateStr = formatDate(date);
               const isToday = isSameDay(date, currentDate);
@@ -635,12 +657,12 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
               );
             })}
             
-            {/* Sidebar Overlay - positioned as grid item spanning weekend columns */}
+            {/* Sidebar Overlay - positioned as grid item spanning last available columns */}
             {isCurrentWeek && sidebarOpen && (
               <div 
                 className="bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 shadow-xl z-30 transform transition-transform duration-300 ease-in-out"
                 style={{
-                  gridColumn: '7 / span 2', // Span Saturday and Sunday columns (6th and 7th day columns)
+                  gridColumn: `${Math.max(1, visibleDayIndices.length - 1)} / span 2`, // Span last 2 visible columns
                   gridRow: '1 / -1', // Span all rows
                   pointerEvents: 'auto'
                 }}
