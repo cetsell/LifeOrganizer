@@ -544,9 +544,10 @@ interface WeekViewProps {
   expandedTimeSlot?: { date: string; hour: number } | null;
   setExpandedTimeSlot?: (value: { date: string; hour: number } | null) => void;
   onDayClick?: (date: Date) => void;
+  currentWeekStart?: Date;
 }
 
-function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, expandedTimeSlot, setExpandedTimeSlot, onDayClick }: WeekViewProps) {
+function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, expandedTimeSlot, setExpandedTimeSlot, onDayClick, currentWeekStart }: WeekViewProps) {
   const weekEnd = addDays(weekStart, 6);
   const startDate = formatDate(weekStart);
   const endDate = formatDate(weekEnd);
@@ -773,7 +774,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
     }
   };
   
-  const isPreviousWeek = weekStart < new Date();
+  const isPreviousWeek = currentWeekStart ? weekStart < currentWeekStart : weekStart < new Date();
   
   const handleWeekTitleClick = () => {
     if (onDayClick) {
@@ -1504,9 +1505,13 @@ export default function Calendar() {
     <div className="p-4 h-full overflow-y-auto">
       {/* Date Display */}
       <div className="mb-6">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-gray-100" data-testid="current-date">
+        <button 
+          onClick={goToToday}
+          className="text-xl font-semibold text-gray-900 dark:text-gray-100 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+          data-testid="button-jump-to-today"
+        >
           {format(currentDate, "MMMM d, yyyy")}
-        </h2>
+        </button>
       </div>
       
       {/* Task Sidebar Content */}
@@ -1516,26 +1521,42 @@ export default function Calendar() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 relative" data-testid="calendar-page">
-        {/* Floating Sidebar Toggle Button */}
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={toggleSidebar}
-          data-testid="button-toggle-sidebar"
-          aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-          aria-expanded={isSidebarOpen}
-          className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-800 shadow-lg"
-        >
-          {isSidebarOpen ? (
-            <PanelRightClose className="h-4 w-4" />
-          ) : (
-            <PanelRightOpen className="h-4 w-4" />
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 relative overflow-x-hidden" data-testid="calendar-page">
+        {/* Floating Button Group in Top-Right */}
+        <div className="fixed top-4 right-4 z-50 flex gap-2">
+          {/* Today Button - Shows when sidebar is closed */}
+          {!isSidebarOpen && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={goToToday}
+              data-testid="button-today-floating"
+              className="bg-white dark:bg-gray-800 shadow-lg"
+            >
+              {format(new Date(), "MMM d")}
+            </Button>
           )}
-          <span className="sr-only">
-            {isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-          </span>
-        </Button>
+          
+          {/* Sidebar Toggle Button */}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={toggleSidebar}
+            data-testid="button-toggle-sidebar"
+            aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            aria-expanded={isSidebarOpen}
+            className="bg-white dark:bg-gray-800 shadow-lg"
+          >
+            {isSidebarOpen ? (
+              <PanelRightClose className="h-4 w-4" />
+            ) : (
+              <PanelRightOpen className="h-4 w-4" />
+            )}
+            <span className="sr-only">
+              {isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+            </span>
+          </Button>
+        </div>
 
         {/* Main Content Area */}
         <div className="flex min-h-screen">
@@ -1549,6 +1570,7 @@ export default function Calendar() {
                 isCurrentWeek={false}
                 expandedTimeSlot={null}
                 onDayClick={handleDayClick}
+                currentWeekStart={currentWeekStart}
               />
             </div>
             
@@ -1561,6 +1583,7 @@ export default function Calendar() {
                 onTimeBlockClick={handleTimeBlockClick}
                 expandedTimeSlot={expandedTimeSlot}
                 setExpandedTimeSlot={setExpandedTimeSlot}
+                currentWeekStart={currentWeekStart}
               />
             </div>
             
@@ -1572,16 +1595,15 @@ export default function Calendar() {
                 isCurrentWeek={false}
                 expandedTimeSlot={null}
                 onDayClick={handleDayClick}
+                currentWeekStart={currentWeekStart}
               />
             </div>
           </main>
           
           {/* Desktop Sidebar - Fixed Position */}
-          {!isMobile && (
+          {!isMobile && isSidebarOpen && (
             <aside 
-              className={`fixed right-0 top-0 h-screen w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out ${
-                isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
-              }`}
+              className="fixed right-0 top-0 h-screen w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out translate-x-0"
               data-testid="desktop-sidebar"
             >
               {sidebarContent}
