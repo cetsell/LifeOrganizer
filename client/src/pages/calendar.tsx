@@ -1521,7 +1521,7 @@ export default function Calendar() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 relative overflow-x-hidden" data-testid="calendar-page">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 relative" data-testid="calendar-page">
         {/* Floating Button Group in Top-Right */}
         <div className="fixed top-4 right-4 z-50 flex gap-2">
           {/* Today Button - Shows when sidebar is closed */}
