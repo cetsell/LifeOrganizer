@@ -761,6 +761,23 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
   }
   
   // Condensed view for non-current weeks
+  const getTaskDotColor = (color: string | null) => {
+    switch (color) {
+      case "blue":
+        return "bg-blue-500";
+      case "green":
+        return "bg-green-500";
+      case "purple":
+        return "bg-purple-500";
+      case "orange":
+        return "bg-orange-500";
+      case "red":
+        return "bg-red-500";
+      default:
+        return "bg-blue-500";
+    }
+  };
+  
   return (
     <Card className="w-full bg-gray-50 dark:bg-gray-800/30 shadow-sm" data-testid="condensed-week">
       <CardContent className="p-3">
@@ -774,7 +791,8 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             const dayEvents = events.filter(event => event.date === dateStr);
             const dayTasks = tasks.filter(task => task.scheduledDate === dateStr);
             const dayNotes = notes.filter(note => note.date === dateStr);
-            const hasContent = dayEvents.length > 0 || dayTasks.length > 0 || dayNotes.length > 0;
+            const allItems = [...dayTasks, ...dayNotes, ...dayEvents];
+            const hasContent = allItems.length > 0;
             
             const handleDayClick = () => {
               if (onDayClick) {
@@ -785,20 +803,46 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             return (
               <div 
                 key={day}
-                className={`p-2 min-h-10 text-xs rounded border cursor-pointer hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors ${
+                className={`p-1.5 min-h-16 text-xs rounded border cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/20 transition-colors ${
                   hasContent 
-                    ? "bg-blue-100 dark:bg-blue-900/30 border-blue-200 dark:border-blue-700" 
+                    ? "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" 
                     : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
                 }`}
                 onClick={handleDayClick}
                 data-testid={`condensed-day-${day.toLowerCase()}`}
               >
-                <div className="text-center font-medium text-gray-700 dark:text-gray-300">
-                  {format(date, "d")}
+                <div className="text-center font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  {day.slice(0, 1)}
+                  <div className="text-gray-600 dark:text-gray-400">{format(date, "d")}</div>
                 </div>
                 {hasContent && (
-                  <div className="text-center mt-1">
-                    <div className="w-1.5 h-1.5 bg-blue-500 dark:bg-blue-400 rounded-full mx-auto" />
+                  <div className="space-y-0.5">
+                    {dayTasks.slice(0, 2).map((task, idx) => (
+                      <div 
+                        key={`task-${idx}`}
+                        className={`w-full h-1 rounded ${getTaskDotColor(task.color)}`}
+                        title={task.title}
+                      />
+                    ))}
+                    {dayNotes.slice(0, 2).map((note, idx) => (
+                      <div 
+                        key={`note-${idx}`}
+                        className="w-full h-1 rounded bg-gray-400 dark:bg-gray-500"
+                        title={note.content.substring(0, 30)}
+                      />
+                    ))}
+                    {dayEvents.slice(0, 2).map((event, idx) => (
+                      <div 
+                        key={`event-${idx}`}
+                        className="w-full h-1 rounded bg-indigo-500"
+                        title={event.title}
+                      />
+                    ))}
+                    {allItems.length > 6 && (
+                      <div className="text-center text-gray-500 dark:text-gray-400 text-[0.6rem] pt-0.5">
+                        +{allItems.length - 6}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -1453,65 +1497,31 @@ export default function Calendar() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex flex-col" data-testid="calendar-page">
-        {/* Header with Navigation and Toggle */}
-        <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 p-4">
-          <div className="flex items-center justify-between">
-            {/* Week Navigation */}
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigateWeek("prev")}
-                data-testid="button-prev-week"
-              >
-                <ChevronLeft className="h-4 w-4 mr-1" />
-                Previous
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={goToToday}
-                data-testid="button-today"
-              >
-                Today
-              </Button>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => navigateWeek("next")}
-                data-testid="button-next-week"
-              >
-                Next
-                <ChevronRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-
-            {/* Sidebar Toggle Button */}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={toggleSidebar}
-              data-testid="button-toggle-sidebar"
-              aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-              aria-expanded={isSidebarOpen}
-            >
-              {isSidebarOpen ? (
-                <PanelRightClose className="h-4 w-4" />
-              ) : (
-                <PanelRightOpen className="h-4 w-4" />
-              )}
-              <span className="sr-only">
-                {isSidebarOpen ? "Close sidebar" : "Open sidebar"}
-              </span>
-            </Button>
-          </div>
-        </header>
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 relative" data-testid="calendar-page">
+        {/* Floating Sidebar Toggle Button */}
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={toggleSidebar}
+          data-testid="button-toggle-sidebar"
+          aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+          aria-expanded={isSidebarOpen}
+          className="fixed top-4 right-4 z-50 bg-white dark:bg-gray-800 shadow-lg"
+        >
+          {isSidebarOpen ? (
+            <PanelRightClose className="h-4 w-4" />
+          ) : (
+            <PanelRightOpen className="h-4 w-4" />
+          )}
+          <span className="sr-only">
+            {isSidebarOpen ? "Close sidebar" : "Open sidebar"}
+          </span>
+        </Button>
 
         {/* Main Content Area */}
-        <div className="flex flex-1 min-h-0">
+        <div className="flex min-h-screen">
           {/* Main Calendar Area */}
-          <main className={`${isSidebarOpen && !isMobile ? 'flex-1 min-w-0' : 'w-full'} p-4 transition-all duration-300 ease-in-out`}>
+          <main className={`${isSidebarOpen && !isMobile ? 'flex-1 min-w-0 mr-80' : 'w-full'} p-4 pt-16`}>
             <div className="w-full space-y-4">
               {/* Previous Week */}
               <WeekView 
@@ -1531,8 +1541,10 @@ export default function Calendar() {
                 expandedTimeSlot={expandedTimeSlot}
                 setExpandedTimeSlot={setExpandedTimeSlot}
               />
-              
-              {/* Next Week */}
+            </div>
+            
+            {/* Next Week - Sticky at bottom */}
+            <div className="sticky bottom-0 mt-4 pb-4">
               <WeekView 
                 weekStart={nextWeekStart}
                 currentDate={currentDate}
@@ -1543,10 +1555,12 @@ export default function Calendar() {
             </div>
           </main>
           
-          {/* Desktop Sidebar - Conditional Rendering */}
-          {!isMobile && isSidebarOpen && (
+          {/* Desktop Sidebar - Fixed Position */}
+          {!isMobile && (
             <aside 
-              className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out" 
+              className={`fixed right-0 top-0 h-screen w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out ${
+                isSidebarOpen ? 'translate-x-0' : 'translate-x-full'
+              }`}
               data-testid="desktop-sidebar"
             >
               {sidebarContent}
