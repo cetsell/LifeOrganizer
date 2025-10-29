@@ -636,11 +636,6 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
   if (isCurrentWeek) {
     return (
       <Card className="w-full bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700" data-testid="current-week">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-lg font-semibold text-center text-gray-900 dark:text-gray-100">
-            {format(weekStart, "MMM d")} - {format(weekEnd, "MMM d, yyyy")}
-          </CardTitle>
-        </CardHeader>
         <CardContent className="p-0">
           {/* Header with days */}
           <div 
@@ -778,12 +773,25 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
     }
   };
   
+  const isPreviousWeek = weekStart < new Date();
+  
+  const handleWeekTitleClick = () => {
+    if (onDayClick) {
+      // Navigate to the first day of this week
+      onDayClick(weekStart);
+    }
+  };
+  
   return (
     <Card className="w-full bg-gray-50 dark:bg-gray-800/30 shadow-sm" data-testid="condensed-week">
       <CardContent className="p-3">
-        <h3 className="text-sm font-medium text-left text-gray-600 dark:text-gray-400 mb-3">
-          {weekStart < new Date() ? "Previous week" : "Next week"}
-        </h3>
+        <button 
+          onClick={handleWeekTitleClick}
+          className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 mb-2 transition-colors cursor-pointer"
+          data-testid={`button-navigate-${isPreviousWeek ? 'prev' : 'next'}-week`}
+        >
+          {isPreviousWeek ? "Previous week" : "Next week"}
+        </button>
         <div className="grid grid-cols-7 gap-1">
           {DAYS_OF_WEEK.map((day, index) => {
             const date = addDays(weekStart, index);
@@ -803,7 +811,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             return (
               <div 
                 key={day}
-                className={`p-1.5 min-h-16 text-xs rounded border cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/20 transition-colors ${
+                className={`p-1.5 min-h-14 text-xs rounded border cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/20 transition-colors ${
                   hasContent 
                     ? "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" 
                     : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
@@ -811,35 +819,46 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                 onClick={handleDayClick}
                 data-testid={`condensed-day-${day.toLowerCase()}`}
               >
-                <div className="text-center font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  {day.slice(0, 1)}
-                  <div className="text-gray-600 dark:text-gray-400">{format(date, "d")}</div>
+                <div className="text-center font-medium text-gray-700 dark:text-gray-300 mb-1 text-[0.65rem]">
+                  {day.slice(0, 3)} {format(date, "M/d")}
                 </div>
                 {hasContent && (
                   <div className="space-y-0.5">
                     {dayTasks.slice(0, 2).map((task, idx) => (
                       <div 
                         key={`task-${idx}`}
-                        className={`w-full h-1 rounded ${getTaskDotColor(task.color)}`}
-                        title={task.title}
-                      />
+                        className="flex items-center gap-1"
+                      >
+                        <div className={`w-1 h-1 rounded-full flex-shrink-0 ${getTaskDotColor(task.color)}`} />
+                        <div className="text-[0.55rem] truncate text-gray-700 dark:text-gray-300">
+                          {task.title}
+                        </div>
+                      </div>
                     ))}
                     {dayNotes.slice(0, 2).map((note, idx) => (
                       <div 
                         key={`note-${idx}`}
-                        className="w-full h-1 rounded bg-gray-400 dark:bg-gray-500"
-                        title={note.content.substring(0, 30)}
-                      />
+                        className="flex items-center gap-1"
+                      >
+                        <div className="w-1 h-1 rounded-full flex-shrink-0 bg-gray-400 dark:bg-gray-500" />
+                        <div className="text-[0.55rem] truncate text-gray-700 dark:text-gray-300">
+                          {note.content.substring(0, 15)}
+                        </div>
+                      </div>
                     ))}
                     {dayEvents.slice(0, 2).map((event, idx) => (
                       <div 
                         key={`event-${idx}`}
-                        className="w-full h-1 rounded bg-indigo-500"
-                        title={event.title}
-                      />
+                        className="flex items-center gap-1"
+                      >
+                        <div className="w-1 h-1 rounded-full flex-shrink-0 bg-indigo-500" />
+                        <div className="text-[0.55rem] truncate text-gray-700 dark:text-gray-300">
+                          {event.title}
+                        </div>
+                      </div>
                     ))}
                     {allItems.length > 6 && (
-                      <div className="text-center text-gray-500 dark:text-gray-400 text-[0.6rem] pt-0.5">
+                      <div className="text-center text-gray-500 dark:text-gray-400 text-[0.55rem] pt-0.5">
                         +{allItems.length - 6}
                       </div>
                     )}
@@ -1448,7 +1467,7 @@ export default function Calendar() {
   }, [isSidebarOpen, isMobile]);
 
   const toggleSidebar = () => {
-    setIsSidebarOpen(prev => !prev);
+    setIsSidebarOpen((prev: boolean) => !prev);
   };
 
   const currentWeekStart = getWeekStart(currentDate);
@@ -1522,8 +1541,8 @@ export default function Calendar() {
         <div className="flex min-h-screen">
           {/* Main Calendar Area */}
           <main className={`${isSidebarOpen && !isMobile ? 'flex-1 min-w-0 mr-80' : 'w-full'} p-4 pt-16`}>
-            <div className="w-full space-y-4">
-              {/* Previous Week */}
+            {/* Previous Week - Sticky at top */}
+            <div className="sticky top-16 z-10 mb-4">
               <WeekView 
                 weekStart={previousWeekStart}
                 currentDate={currentDate}
@@ -1531,7 +1550,9 @@ export default function Calendar() {
                 expandedTimeSlot={null}
                 onDayClick={handleDayClick}
               />
-              
+            </div>
+            
+            <div className="w-full space-y-4">
               {/* Current Week */}
               <WeekView 
                 weekStart={currentWeekStart}
@@ -1544,7 +1565,7 @@ export default function Calendar() {
             </div>
             
             {/* Next Week - Sticky at bottom */}
-            <div className="sticky bottom-0 mt-4 pb-4">
+            <div className="sticky bottom-0 mt-4 pb-4 z-10">
               <WeekView 
                 weekStart={nextWeekStart}
                 currentDate={currentDate}
