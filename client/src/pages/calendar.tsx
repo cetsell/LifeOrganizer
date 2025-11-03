@@ -28,7 +28,7 @@ const formatTime = (hour: number) => {
   return format(date, "h:mm a");
 };
 
-const HOURS = Array.from({ length: 24 }, (_, i) => i);
+const HOURS = Array.from({ length: 17 }, (_, i) => i + 6); // 6am to 10pm
 const DAYS_OF_WEEK = ["SUN", "MON", "TUES", "WEDS", "THURS", "FRI", "SAT"];
 
 // Drag and drop item types
@@ -709,7 +709,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                   className="relative border-r border-gray-100 dark:border-gray-800 last:border-r-0 overflow-hidden"
                   style={{
                     display: 'grid',
-                    gridTemplateRows: 'repeat(24, minmax(3rem, auto))',
+                    gridTemplateRows: `repeat(${HOURS.length}, minmax(3rem, auto))`,
                     gridTemplateColumns: '1fr'
                   }}
                   data-testid={`day-column-${dateStr}`}
@@ -717,7 +717,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                   {/* No more spanning events - multi-hour events now handled in TimeSlot */}
                   
                   {/* Render time slots for tasks and notes */}
-                  {HOURS.map(hour => {
+                  {HOURS.map((hour, hourIndex) => {
                     const isCurrentHour = hour === new Date().getHours() && isToday;
                     const { tasks: dayTasks, notes: dayNotes } = getItemsForTimeBlock(dateStr, hour);
                     
@@ -727,7 +727,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                         className={`border-b border-gray-100 dark:border-gray-800 ${
                           isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
                         }`}
-                        style={{ gridRow: hour + 1 }}
+                        style={{ gridRow: hourIndex + 1 }}
                         data-testid={`time-cell-${dateStr}-${hour}`}
                       >
                         <TimeSlot
