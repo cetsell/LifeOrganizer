@@ -365,7 +365,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
   return (
     <div 
       ref={drop}
-      className={`w-full relative overflow-hidden transition-colors cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/50 ${
+      className={`w-full relative overflow-hidden transition-colors cursor-pointer hover:bg-orange-50/30 dark:hover:bg-gray-800/50 ${
         isCurrentHour ? "bg-blue-50 dark:bg-blue-950/20" : ""
       } ${
         isOver ? "bg-primary/10 dark:bg-primary/5" : ""
@@ -379,9 +379,10 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
         <div 
           className={`p-3 h-full flex flex-col overflow-hidden ${
             isDayExpanded 
-              ? "absolute left-0 right-0 top-0 z-50 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-lg" 
+              ? "absolute left-0 right-0 top-0 z-50 border border-gray-200 dark:border-gray-700 shadow-lg" 
               : ""
           }`}
+          style={isDayExpanded ? { backgroundColor: '#FFF8E9' } : undefined}
           data-testid={`expanded-notes-${date}-${hour}`}
         >
           {/* Time Header */}
@@ -465,7 +466,7 @@ function TimeSlot({ date, hour, tasks, notes, events, continuationEvents, isCurr
       {/* Event Creation Modal */}
       {showEventModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" data-testid="event-modal-backdrop">
-          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-96 max-w-[90vw] p-6">
+          <div className="rounded-lg shadow-xl w-96 max-w-[90vw] p-6" style={{ backgroundColor: '#FFF8E9' }}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100">Add Event</h3>
               <Button
@@ -643,7 +644,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             className="grid border-b border-gray-200 dark:border-gray-700 transition-all duration-300 ease-in-out"
             style={{ gridTemplateColumns: generateGridColumns() }}
           >
-            <div className="p-3 text-sm font-medium text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            <div className="p-3 text-sm font-medium text-gray-500 dark:text-gray-400 border-r border-gray-200 dark:border-gray-700" style={{ backgroundColor: '#FFF8E9' }}>
               Time
             </div>
             {visibleDayIndices.map((index) => {
@@ -665,10 +666,11 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
               return (
                 <div 
                   key={day}
-                  className={`p-3 text-sm font-medium text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors ${
+                  className={`p-3 text-sm font-medium text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 cursor-pointer transition-colors ${
                     isDayExpanded ? "bg-primary/10 dark:bg-primary/20 text-primary" : 
-                    isToday ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800"
+                    isToday ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300"
                   }`}
+                  style={{ backgroundColor: isDayExpanded || isToday ? undefined : '#FFF8E9' }}
                   onClick={handleDayHeaderClick}
                   data-testid={`day-header-${day.toLowerCase()}`}
                 >
@@ -684,7 +686,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             style={{ gridTemplateColumns: generateGridColumns() }}
           >
             {/* Time column */}
-            <div className="border-r border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+            <div className="border-r border-gray-200 dark:border-gray-700" style={{ backgroundColor: '#FFF8E9' }}>
               {HOURS.map(hour => (
                 <div 
                   key={hour} 
@@ -1520,7 +1522,7 @@ export default function Calendar() {
 
   return (
     <DndProvider backend={HTML5Backend}>
-      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 relative" data-testid="calendar-page">
+      <div className="min-h-screen bg-background relative" data-testid="calendar-page">
         {/* Floating Button Group in Top-Right */}
         <div className="fixed top-4 right-4 z-50 flex gap-2">
           {/* Today Button - Shows when sidebar is closed */}
@@ -1530,7 +1532,8 @@ export default function Calendar() {
               size="sm"
               onClick={goToToday}
               data-testid="button-today-floating"
-              className="bg-white dark:bg-gray-800 shadow-lg"
+              className="shadow-lg"
+              style={{ backgroundColor: '#FFF8E9' }}
             >
               {format(new Date(), "MMM d")}
             </Button>
@@ -1544,7 +1547,8 @@ export default function Calendar() {
             data-testid="button-toggle-sidebar"
             aria-label={isSidebarOpen ? "Close sidebar" : "Open sidebar"}
             aria-expanded={isSidebarOpen}
-            className="bg-white dark:bg-gray-800 shadow-lg"
+            className="shadow-lg"
+            style={{ backgroundColor: '#FFF8E9' }}
           >
             {isSidebarOpen ? (
               <PanelRightClose className="h-4 w-4" />
