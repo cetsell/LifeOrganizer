@@ -636,7 +636,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
 
   if (isCurrentWeek) {
     return (
-      <Card className="w-full bg-white dark:bg-gray-900 shadow-sm border border-gray-200 dark:border-gray-700" data-testid="current-week">
+      <Card className="w-full shadow-sm border border-gray-200 dark:border-gray-700" style={{ backgroundColor: '#FFF8E9' }} data-testid="current-week">
         <CardContent className="p-0">
           {/* Header with days */}
           <div 
@@ -784,7 +784,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
   };
   
   return (
-    <Card className="w-full bg-gray-50 dark:bg-gray-800/30 shadow-sm" data-testid="condensed-week">
+    <Card className="w-full shadow-sm" style={{ backgroundColor: '#FFF8E9' }} data-testid="condensed-week">
       <CardContent className="p-3">
         <button 
           onClick={handleWeekTitleClick}
@@ -812,11 +812,12 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             return (
               <div 
                 key={day}
-                className={`p-1.5 min-h-14 text-xs rounded border cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600/20 transition-colors ${
+                className={`p-1.5 min-h-14 text-xs rounded border cursor-pointer transition-colors ${
                   hasContent 
-                    ? "bg-white dark:bg-gray-700 border-gray-300 dark:border-gray-600" 
-                    : "bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600"
+                    ? "border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600/20" 
+                    : "border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600/20"
                 }`}
+                style={{ backgroundColor: '#FFF8E9' }}
                 onClick={handleDayClick}
                 data-testid={`condensed-day-${day.toLowerCase()}`}
               >
@@ -824,42 +825,40 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                   {day.slice(0, 3)} {format(date, "M/d")}
                 </div>
                 {hasContent && (
-                  <div className="space-y-0.5">
+                  <div className="space-y-1">
                     {dayTasks.slice(0, 2).map((task, idx) => (
                       <div 
                         key={`task-${idx}`}
-                        className="flex items-center gap-1"
+                        className={`px-2 py-0.5 rounded-full text-[0.6rem] truncate ${
+                          task.color === 'blue' ? 'bg-blue-200 dark:bg-blue-700 text-blue-900 dark:text-blue-100' :
+                          task.color === 'green' ? 'bg-green-200 dark:bg-green-700 text-green-900 dark:text-green-100' :
+                          task.color === 'purple' ? 'bg-purple-200 dark:bg-purple-700 text-purple-900 dark:text-purple-100' :
+                          task.color === 'orange' ? 'bg-orange-200 dark:bg-orange-700 text-orange-900 dark:text-orange-100' :
+                          task.color === 'red' ? 'bg-red-200 dark:bg-red-700 text-red-900 dark:text-red-100' :
+                          'bg-blue-200 dark:bg-blue-700 text-blue-900 dark:text-blue-100'
+                        }`}
                       >
-                        <div className={`w-1 h-1 rounded-full flex-shrink-0 ${getTaskDotColor(task.color)}`} />
-                        <div className="text-[0.55rem] truncate text-gray-700 dark:text-gray-300">
-                          {task.title}
-                        </div>
+                        {task.title}
                       </div>
                     ))}
                     {dayNotes.slice(0, 2).map((note, idx) => (
                       <div 
                         key={`note-${idx}`}
-                        className="flex items-center gap-1"
+                        className="px-2 py-0.5 rounded-full text-[0.6rem] truncate bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100"
                       >
-                        <div className="w-1 h-1 rounded-full flex-shrink-0 bg-gray-400 dark:bg-gray-500" />
-                        <div className="text-[0.55rem] truncate text-gray-700 dark:text-gray-300">
-                          {note.content.substring(0, 15)}
-                        </div>
+                        {note.content.substring(0, 20)}
                       </div>
                     ))}
                     {dayEvents.slice(0, 2).map((event, idx) => (
                       <div 
                         key={`event-${idx}`}
-                        className="flex items-center gap-1"
+                        className="px-2 py-0.5 rounded-full text-[0.6rem] truncate bg-indigo-200 dark:bg-indigo-700 text-indigo-900 dark:text-indigo-100"
                       >
-                        <div className="w-1 h-1 rounded-full flex-shrink-0 bg-indigo-500" />
-                        <div className="text-[0.55rem] truncate text-gray-700 dark:text-gray-300">
-                          {event.title}
-                        </div>
+                        {event.title}
                       </div>
                     ))}
                     {allItems.length > 6 && (
-                      <div className="text-center text-gray-500 dark:text-gray-400 text-[0.55rem] pt-0.5">
+                      <div className="text-center text-gray-500 dark:text-gray-400 text-[0.6rem] pt-0.5">
                         +{allItems.length - 6}
                       </div>
                     )}
@@ -918,7 +917,7 @@ function DraggableTask({ task, bgColor, borderColor, onTaskClick }: DraggableTas
   return (
     <div
       ref={drag}
-      className={`p-2 rounded cursor-pointer transition-opacity hover:bg-gray-50 dark:hover:bg-gray-800 ${
+      className={`p-2 rounded cursor-pointer transition-opacity bg-white/40 dark:bg-gray-800/40 shadow-sm hover:bg-white/60 dark:hover:bg-gray-700/60 ${
         isDragging ? "opacity-50" : ""
       }`}
       onClick={handleClick}
@@ -1430,7 +1429,7 @@ function TaskSidebar() {
   const currentDate = new Date();
 
   return (
-    <div className="w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 p-4" data-testid="task-sidebar">
+    <div className="w-80 backdrop-blur-md border-l border-gray-200 dark:border-gray-700 p-4" style={{ backgroundColor: 'rgba(255, 207, 151, 0.3)' }} data-testid="task-sidebar">
       <TaskSidebarContent />
     </div>
   );
@@ -1561,9 +1560,9 @@ export default function Calendar() {
         {/* Main Content Area */}
         <div className="flex min-h-screen">
           {/* Main Calendar Area */}
-          <main className={`${isSidebarOpen && !isMobile ? 'flex-1 min-w-0 mr-80' : 'w-full'} p-4 pt-16`}>
+          <main className={`${isSidebarOpen && !isMobile ? 'flex-1 min-w-0 mr-80' : 'w-full'} p-4`}>
             {/* Previous Week - Sticky at top */}
-            <div className="sticky top-16 z-10 mb-4">
+            <div className="sticky top-0 z-10 mb-4 pt-4">
               <WeekView 
                 weekStart={previousWeekStart}
                 currentDate={currentDate}
@@ -1603,7 +1602,8 @@ export default function Calendar() {
           {/* Desktop Sidebar - Fixed Position */}
           {!isMobile && isSidebarOpen && (
             <aside 
-              className="fixed right-0 top-0 h-screen w-80 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out translate-x-0"
+              className="fixed right-0 top-0 h-screen w-80 backdrop-blur-md border-l border-gray-200 dark:border-gray-700 transform transition-transform duration-300 ease-in-out translate-x-0"
+              style={{ backgroundColor: 'rgba(255, 207, 151, 0.3)' }}
               data-testid="desktop-sidebar"
             >
               {sidebarContent}
