@@ -666,9 +666,10 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
               return (
                 <div 
                   key={day}
-                  className={`p-3 text-sm font-medium text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 cursor-pointer transition-colors ${
+                  className={`p-3 text-sm font-medium text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 cursor-pointer transition-all ${
                     isDayExpanded ? "bg-primary/10 dark:bg-primary/20 text-primary" : 
-                    isToday ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400" : "text-gray-600 dark:text-gray-300"
+                    isToday ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30" : 
+                    "text-gray-600 dark:text-gray-300 hover:bg-orange-50/40 dark:hover:bg-gray-700"
                   }`}
                   style={{ backgroundColor: isDayExpanded || isToday ? undefined : '#FFF8E9' }}
                   onClick={handleDayHeaderClick}
@@ -704,15 +705,19 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
               const dateStr = formatDate(date);
               const isToday = isSameDay(date, currentDate);
               const dayEvents = getEventsForDay(dateStr);
+              const isDayExpanded = expandedTimeSlot?.date === dateStr;
               
               return (
                 <div 
                   key={`${dateStr}`}
-                  className="relative border-r border-gray-100 dark:border-gray-800 last:border-r-0 overflow-hidden"
+                  className={`relative border-r border-gray-100 dark:border-gray-800 last:border-r-0 overflow-hidden transition-all ${
+                    isDayExpanded ? "shadow-lg rounded-sm" : ""
+                  }`}
                   style={{
                     display: 'grid',
                     gridTemplateRows: `repeat(${HOURS.length}, minmax(3rem, auto))`,
-                    gridTemplateColumns: '1fr'
+                    gridTemplateColumns: '1fr',
+                    backgroundColor: isDayExpanded ? '#FFFBF5' : 'transparent'
                   }}
                   data-testid={`day-column-${dateStr}`}
                 >
@@ -814,10 +819,10 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             return (
               <div 
                 key={day}
-                className={`p-1.5 min-h-14 text-xs rounded border cursor-pointer transition-colors ${
+                className={`p-1.5 min-h-14 text-xs rounded border cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] ${
                   hasContent 
-                    ? "border-gray-300 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600/20" 
-                    : "border-gray-200 dark:border-gray-600 hover:bg-gray-100 dark:hover:bg-gray-600/20"
+                    ? "border-gray-300 dark:border-gray-600 hover:bg-orange-50/50 dark:hover:bg-gray-600/20" 
+                    : "border-gray-200 dark:border-gray-600 hover:bg-orange-50/30 dark:hover:bg-gray-600/20"
                 }`}
                 style={{ backgroundColor: '#FFF8E9' }}
                 onClick={handleDayClick}
@@ -1495,10 +1500,10 @@ export default function Calendar() {
   };
   
   const handleDayClick = (date: Date) => {
-    // Navigate to the week containing this date and expand the day at noon
+    // Navigate to the week containing this date
     setCurrentDate(date);
-    const dateStr = formatDate(date);
-    setExpandedTimeSlot({ date: dateStr, hour: 12 }); // Default to noon
+    // Clear any expanded time slots when navigating to a different week
+    setExpandedTimeSlot(null);
   };
 
   // Sidebar content component for reuse
