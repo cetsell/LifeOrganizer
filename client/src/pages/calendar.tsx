@@ -704,6 +704,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
               const date = addDays(weekStart, dayIndex);
               const dateStr = formatDate(date);
               const isToday = isSameDay(date, currentDate);
+              const isActualToday = isSameDay(date, new Date()); // Check against actual current date
               const dayEvents = getEventsForDay(dateStr);
               const isDayExpanded = expandedTimeSlot?.date === dateStr;
               
@@ -725,7 +726,7 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                   
                   {/* Render time slots for tasks and notes */}
                   {HOURS.map((hour, hourIndex) => {
-                    const isCurrentHour = hour === new Date().getHours() && isToday;
+                    const isCurrentHour = hour === new Date().getHours() && isActualToday;
                     const { tasks: dayTasks, notes: dayNotes } = getItemsForTimeBlock(dateStr, hour);
                     
                     return (
