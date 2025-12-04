@@ -651,16 +651,16 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
               const day = DAYS_OF_WEEK[index];
               const date = addDays(weekStart, index);
               const dateStr = formatDate(date);
-              const isToday = isSameDay(date, currentDate);
+              const isActualToday = isSameDay(date, new Date()); // Check against actual current date
               const isDayExpanded = expandedTimeSlot?.date === dateStr;
               
               const handleDayHeaderClick = () => {
-                // Clear any time slot expansion and expand this day
-                setExpandedTimeSlot?.(null);
-                // Set a temporary expanded slot to trigger day-wide expansion
-                setTimeout(() => {
-                  setExpandedTimeSlot?.({ date: dateStr, hour: 12 }); // Use noon as default
-                }, 50);
+                // Toggle day expansion - if already expanded, collapse it; otherwise expand
+                if (expandedTimeSlot?.date === dateStr) {
+                  setExpandedTimeSlot?.(null);
+                } else {
+                  setExpandedTimeSlot?.({ date: dateStr, hour: 12 }); // Expand at noon
+                }
               };
               
               return (
@@ -668,10 +668,10 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                   key={day}
                   className={`p-3 text-sm font-medium text-center border-r border-gray-200 dark:border-gray-700 last:border-r-0 cursor-pointer transition-all ${
                     isDayExpanded ? "bg-primary/10 dark:bg-primary/20 text-primary" : 
-                    isToday ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30" : 
+                    isActualToday ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/30" : 
                     "text-gray-600 dark:text-gray-300 hover:bg-orange-50/40 dark:hover:bg-gray-700"
                   }`}
-                  style={{ backgroundColor: isDayExpanded || isToday ? undefined : '#FFF8E9' }}
+                  style={{ backgroundColor: isDayExpanded || isActualToday ? undefined : '#FFF8E9' }}
                   onClick={handleDayHeaderClick}
                   data-testid={`day-header-${day.toLowerCase()}`}
                 >
