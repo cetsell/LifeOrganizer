@@ -808,8 +808,15 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             const dayEvents = events.filter(event => event.date === dateStr);
             const dayTasks = tasks.filter(task => task.scheduledDate === dateStr);
             const dayNotes = notes.filter(note => note.date === dateStr);
-            const allItems = [...dayTasks, ...dayNotes, ...dayEvents];
+            // Build a unified list with color metadata for dot rendering
+            const allItems: { label: string; color: string; type: 'task' | 'note' | 'event' }[] = [
+              ...dayTasks.map(t => ({ label: t.title, color: t.color ?? 'blue', type: 'task' as const })),
+              ...dayNotes.map(n => ({ label: n.content.substring(0, 20), color: 'gray', type: 'note' as const })),
+              ...dayEvents.map(e => ({ label: e.title, color: 'indigo', type: 'event' as const })),
+            ];
             const hasContent = allItems.length > 0;
+            const visibleItems = allItems.slice(0, 3);
+            const overflowItems = allItems.slice(3);
             
             const handleDayClick = () => {
               if (onDayClick) {
@@ -834,40 +841,38 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
                 </div>
                 {hasContent && (
                   <div className="space-y-1">
-                    {dayTasks.slice(0, 2).map((task, idx) => (
-                      <div 
-                        key={`task-${idx}`}
+                    {visibleItems.map((item, idx) => (
+                      <div
+                        key={idx}
                         className={`px-2 py-0.5 rounded-full text-[0.6rem] truncate ${
-                          task.color === 'blue' ? 'bg-blue-200 dark:bg-blue-700 text-blue-900 dark:text-blue-100' :
-                          task.color === 'green' ? 'bg-green-200 dark:bg-green-700 text-green-900 dark:text-green-100' :
-                          task.color === 'purple' ? 'bg-purple-200 dark:bg-purple-700 text-purple-900 dark:text-purple-100' :
-                          task.color === 'orange' ? 'bg-orange-200 dark:bg-orange-700 text-orange-900 dark:text-orange-100' :
-                          task.color === 'red' ? 'bg-red-200 dark:bg-red-700 text-red-900 dark:text-red-100' :
-                          'bg-blue-200 dark:bg-blue-700 text-blue-900 dark:text-blue-100'
+                          item.color === 'blue'   ? 'bg-blue-200 dark:bg-blue-700 text-blue-900 dark:text-blue-100' :
+                          item.color === 'green'  ? 'bg-green-200 dark:bg-green-700 text-green-900 dark:text-green-100' :
+                          item.color === 'purple' ? 'bg-purple-200 dark:bg-purple-700 text-purple-900 dark:text-purple-100' :
+                          item.color === 'orange' ? 'bg-orange-200 dark:bg-orange-700 text-orange-900 dark:text-orange-100' :
+                          item.color === 'red'    ? 'bg-red-200 dark:bg-red-700 text-red-900 dark:text-red-100' :
+                          item.color === 'indigo' ? 'bg-indigo-200 dark:bg-indigo-700 text-indigo-900 dark:text-indigo-100' :
+                          'bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100'
                         }`}
                       >
-                        {task.title}
+                        {item.label}
                       </div>
                     ))}
-                    {dayNotes.slice(0, 2).map((note, idx) => (
-                      <div 
-                        key={`note-${idx}`}
-                        className="px-2 py-0.5 rounded-full text-[0.6rem] truncate bg-gray-200 dark:bg-gray-600 text-gray-900 dark:text-gray-100"
-                      >
-                        {note.content.substring(0, 20)}
-                      </div>
-                    ))}
-                    {dayEvents.slice(0, 2).map((event, idx) => (
-                      <div 
-                        key={`event-${idx}`}
-                        className="px-2 py-0.5 rounded-full text-[0.6rem] truncate bg-indigo-200 dark:bg-indigo-700 text-indigo-900 dark:text-indigo-100"
-                      >
-                        {event.title}
-                      </div>
-                    ))}
-                    {allItems.length > 6 && (
-                      <div className="text-center text-gray-500 dark:text-gray-400 text-[0.6rem] pt-0.5">
-                        +{allItems.length - 6}
+                    {overflowItems.length > 0 && (
+                      <div className="flex flex-wrap gap-0.5 pt-0.5">
+                        {overflowItems.map((item, idx) => (
+                          <span
+                            key={idx}
+                            className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${
+                              item.color === 'blue'   ? 'bg-blue-400' :
+                              item.color === 'green'  ? 'bg-green-400' :
+                              item.color === 'purple' ? 'bg-purple-400' :
+                              item.color === 'orange' ? 'bg-orange-400' :
+                              item.color === 'red'    ? 'bg-red-400' :
+                              item.color === 'indigo' ? 'bg-indigo-400' :
+                              'bg-gray-400'
+                            }`}
+                          />
+                        ))}
                       </div>
                     )}
                   </div>
