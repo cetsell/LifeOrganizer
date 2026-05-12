@@ -792,15 +792,8 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
   };
   
   return (
-    <Card className="w-full shadow-sm" style={{ backgroundColor: '#FFF8E9' }} data-testid="condensed-week">
-      <CardContent className="p-3">
-        <button 
-          onClick={handleWeekTitleClick}
-          className="text-xs font-medium text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300 mb-2 transition-colors cursor-pointer"
-          data-testid={`button-navigate-${isPreviousWeek ? 'prev' : 'next'}-week`}
-        >
-          {isPreviousWeek ? "Previous week" : "Next week"}
-        </button>
+    <div className="w-full" data-testid="condensed-week">
+      <div className="p-3">
         <div className="grid grid-cols-7 gap-1">
           {DAYS_OF_WEEK.map((day, index) => {
             const date = addDays(weekStart, index);
@@ -881,8 +874,8 @@ function WeekView({ weekStart, currentDate, isCurrentWeek, onTimeBlockClick, exp
             );
           })}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }
 
